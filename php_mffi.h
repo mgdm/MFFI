@@ -41,14 +41,14 @@ ZEND_TSRMLS_CACHE_EXTERN();
 #endif
 
 PHP_MINIT_FUNCTION(mffi);
-PHP_MINIT_FUNCTION(mffi_handle);
+PHP_MINIT_FUNCTION(mffi_library);
 PHP_MSHUTDOWN_FUNCTION(mffi);
 PHP_MINIT_FUNCTION(mffi);
 
-typedef struct _php_mffi_handle_object {
+typedef struct _php_mffi_library_object {
 	void *handle;
 	zend_object std;
-} php_mffi_handle_object;
+} php_mffi_library_object;
 
 #endif	/* PHP_mffi_H */
 

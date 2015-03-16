@@ -43,7 +43,7 @@ if test "$PHP_MFFI" != "no"; then
   
   PHP_SUBST(MFFI_SHARED_LIBADD)
 
-  PHP_NEW_EXTENSION(mffi, mffi.c mffi_handle.c, $ext_shared)
+  PHP_NEW_EXTENSION(mffi, mffi.c mffi_library.c, $ext_shared)
 
   AC_FUNC_STRERROR_R
 fi
