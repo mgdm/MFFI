@@ -25,6 +25,7 @@ PHP_MINIT_FUNCTION(mffi)
 	mffi_ce_exception = zend_register_internal_class_ex(&exception_ce, zend_exception_get_default());
 
 	PHP_MINIT(mffi_library)(INIT_FUNC_ARGS_PASSTHRU);
+	PHP_MINIT(mffi_function)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 }

@@ -14,14 +14,13 @@ zend_class_entry *mffi_ce_library;
 
 static zend_object_handlers mffi_library_object_handlers;
 
-static inline php_mffi_library_object *php_mffi_library_fetch_object(zend_object *obj);
 
 /* {{{ */
 PHP_METHOD(MFFI_Library, __construct)
 {
 	zend_string *lib_name;
 	void *handle;
-	php_mffi_library_object *object;
+	php_mffi_library_object *intern;
 	zval *self;
 
 	PHP_MFFI_ERROR_HANDLING();
@@ -31,8 +30,7 @@ PHP_METHOD(MFFI_Library, __construct)
 	}
 	PHP_MFFI_RESTORE_ERRORS();
 
-	//	object = php_mffi_library_fetch_object(Z_OBJ_P(getThis()));
-	PHP_MFFI_LIBRARY_FROM_OBJECT(object, getThis());
+	PHP_MFFI_LIBRARY_FROM_OBJECT(intern, getThis());
 
 	handle = dlopen(lib_name->val, RTLD_LAZY);
 	if (!handle) {
@@ -40,19 +38,57 @@ PHP_METHOD(MFFI_Library, __construct)
 		return;
 	}
 
-	object->handle = handle;
+	intern->handle = handle;
+}
+/* }}} */
+
+/* {{{ */
+PHP_METHOD(MFFI_Library, bind)
+{
+	zend_string *func_name;
+	void *handle;
+	php_mffi_library_object *intern;
+	php_mffi_function_object *function;
+	char *err;
+
+	PHP_MFFI_ERROR_HANDLING();
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &func_name) == FAILURE) {
+		PHP_MFFI_RESTORE_ERRORS();
+		return;
+	}
+	PHP_MFFI_RESTORE_ERRORS();
+
+	PHP_MFFI_LIBRARY_FROM_OBJECT(intern, getThis());
+
+	if (!intern->handle) {
+		zend_throw_exception(mffi_ce_exception, "Library object is uninitialized", 1);
+		return;
+	}
+
+	object_init_ex(return_value, mffi_ce_function);
+	PHP_MFFI_FUNCTION_FROM_OBJECT(function, return_value);
+	handle = dlsym(intern->handle, func_name->val);
+	err = dlerror();
+
+	if (err) {
+		zend_throw_exception(mffi_ce_exception, err, 1);
+		return;
+	}
+
+	function->function = handle;
 }
 /* }}} */
 
 /* {{{ */
 const zend_function_entry mffi_library_methods[] = {
 	PHP_ME(MFFI_Library, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
-		PHP_FE_END
+	PHP_ME(MFFI_Library, bind, NULL, ZEND_ACC_PUBLIC)
+	PHP_FE_END
 };
 /* }}} */
 
 /* {{{ */
-static inline php_mffi_library_object *php_mffi_library_fetch_object(zend_object *obj) {
+php_mffi_library_object *php_mffi_library_fetch_object(zend_object *obj) {
 	return (php_mffi_library_object *)((char*)(obj) - XtOffsetOf(php_mffi_library_object, std));
 }
 /* }}} */
