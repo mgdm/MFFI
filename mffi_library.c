@@ -14,6 +14,66 @@ zend_class_entry *mffi_ce_library;
 
 static zend_object_handlers mffi_library_object_handlers;
 
+static ffi_type *php_mffi_get_type(long type) {
+	switch(type) {
+		case FFI_TYPE_VOID:
+			return &ffi_type_void;
+			break;
+
+		case FFI_TYPE_INT:
+			return &ffi_type_sint;
+			break;
+
+		case FFI_TYPE_FLOAT:
+			return &ffi_type_float;
+			break;
+
+		case FFI_TYPE_DOUBLE:
+			return &ffi_type_double;
+			break;
+
+		case FFI_TYPE_LONGDOUBLE:
+			return &ffi_type_longdouble;
+			break;
+
+		case FFI_TYPE_UINT8:
+			return &ffi_type_uint8;
+			break;
+
+		case FFI_TYPE_SINT8:
+			return &ffi_type_sint8;
+			break;
+
+		case FFI_TYPE_UINT16:
+			return &ffi_type_uint16;
+			break;
+
+		case FFI_TYPE_SINT16:
+			return &ffi_type_sint16;
+			break;
+
+		case FFI_TYPE_UINT32:
+			return &ffi_type_uint32;
+			break;
+
+		case FFI_TYPE_SINT32:
+			return &ffi_type_sint32;
+			break;
+
+		case FFI_TYPE_UINT64:
+			return &ffi_type_uint64;
+			break;
+
+		case FFI_TYPE_SINT64:
+			return &ffi_type_sint64;
+			break;
+
+		case FFI_TYPE_STRUCT:
+		case FFI_TYPE_POINTER:
+		default:
+			return NULL;
+	}
+}		
 
 /* {{{ */
 PHP_METHOD(MFFI_Library, __construct)
@@ -53,11 +113,12 @@ PHP_METHOD(MFFI_Library, bind)
 	php_mffi_function_object *function = NULL;
 	zend_long num_key = 0, i = 0;
 	zend_string *string_key = NULL;
+	ffi_status status;
 	void *handle = NULL;
 	char *err = NULL;
 
 	PHP_MFFI_ERROR_HANDLING();
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|al", &func_name, &args, &return_value) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|al", &func_name, &args, &return_type) == FAILURE) {
 		PHP_MFFI_RESTORE_ERRORS();
 		return;
 	}
@@ -84,7 +145,8 @@ PHP_METHOD(MFFI_Library, bind)
 
 	args_hash = Z_ARRVAL_P(args);
 	function->arg_count = zend_hash_num_elements(args_hash);
-	function->arg_types = ecalloc(function->arg_count, sizeof(ffi_type));
+	function->ffi_arg_types = ecalloc(function->arg_count, sizeof(ffi_type));
+	function->php_arg_types = ecalloc(function->arg_count, sizeof(long));
 
 	ZEND_HASH_FOREACH_VAL(args_hash, current_arg) {
 		if (Z_TYPE_P(current_arg) != IS_LONG) {
@@ -92,68 +154,22 @@ PHP_METHOD(MFFI_Library, bind)
 			return;
 		}
 
-		switch(Z_LVAL_P(current_arg)) {
-		case FFI_TYPE_VOID:
-			function->arg_types[i] = &ffi_type_void;
-			break;
-
-		case FFI_TYPE_INT:
-			function->arg_types[i] = &ffi_type_sint;
-			break;
-
-		case FFI_TYPE_FLOAT:
-			function->arg_types[i] = &ffi_type_float;
-			break;
-
-		case FFI_TYPE_DOUBLE:
-			function->arg_types[i] = &ffi_type_longdouble;
-			break;
-
-		case FFI_TYPE_LONGDOUBLE:
-			function->arg_types[i] = &ffi_type_longdouble;
-			break;
-
-		case FFI_TYPE_UINT8:
-			function->arg_types[i] = &ffi_type_uint8;
-			break;
-
-		case FFI_TYPE_SINT8:
-			function->arg_types[i] = &ffi_type_sint8;
-			break;
-
-		case FFI_TYPE_UINT16:
-			function->arg_types[i] = &ffi_type_uint16;
-			break;
-
-		case FFI_TYPE_SINT16:
-			function->arg_types[i] = &ffi_type_sint16;
-			break;
-
-		case FFI_TYPE_UINT32:
-			function->arg_types[i] = &ffi_type_uint32;
-			break;
-
-		case FFI_TYPE_SINT32:
-			function->arg_types[i] = &ffi_type_sint32;
-			break;
-
-		case FFI_TYPE_UINT64:
-			function->arg_types[i] = &ffi_type_uint64;
-			break;
-
-		case FFI_TYPE_SINT64:
-			function->arg_types[i] = &ffi_type_sint64;
-			break;
-
-		case FFI_TYPE_STRUCT:
-		case FFI_TYPE_POINTER:
-		default:
-			zend_throw_exception(mffi_ce_exception, "Unimplemented type", 1);
-			return;
-		}
-
+		function->ffi_arg_types[i] = php_mffi_get_type(Z_LVAL_P(current_arg));
+		function->php_arg_types[i] = Z_LVAL_P(current_arg);
 		i++;
+
 	} ZEND_HASH_FOREACH_END();
+
+	function->return_type = php_mffi_get_type(return_type);
+	function->php_return_type = return_type;
+
+	status = ffi_prep_cif(&function->cif, FFI_DEFAULT_ABI,
+			function->arg_count, function->return_type, function->ffi_arg_types);
+
+	if (status != FFI_OK) {
+		zend_throw_exception(mffi_ce_exception, "Something went wrong preparing the function", 1);
+		return;
+	}
 
 }
 /* }}} */

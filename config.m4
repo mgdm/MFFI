@@ -39,7 +39,7 @@ if test "$PHP_MFFI" != "no"; then
   # --with-mffi -> check for lib and symbol presence
   LIBNAME=ffi # you may want to change this
 
-  PHP_ADD_LIBRARY_WITH_PATH($LIBNAME, $MFFI_DIR/$PHP_LIBDIR, mffi_SHARED_LIBADD)
+  PHP_ADD_LIBRARY_WITH_PATH($LIBNAME, $MFFI_DIR/$PHP_LIBDIR, MFFI_SHARED_LIBADD)
   
   PHP_SUBST(MFFI_SHARED_LIBADD)
 

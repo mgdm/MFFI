@@ -46,6 +46,16 @@ PHP_MINIT_FUNCTION(mffi_function);
 PHP_MSHUTDOWN_FUNCTION(mffi);
 PHP_MINIT_FUNCTION(mffi);
 
+typedef union _php_mffi_value {
+	char c;
+	int i;
+	long l;
+	float f;
+	double d;
+	long double D;
+	void *p;
+} php_mffi_value;
+
 typedef struct _php_mffi_library_object {
 	void *handle;
 	zend_object std;
@@ -55,8 +65,11 @@ typedef struct _php_mffi_function_object {
 	void *function;
 	zval *library_zval;
 	ffi_type *return_type;
-	ffi_type **arg_types;
+	long php_return_type;
+	ffi_type **ffi_arg_types;
+	long *php_arg_types;
 	long arg_count;
+	ffi_cif cif;
 
 	zend_object std;
 } php_mffi_function_object;
