@@ -4,6 +4,7 @@
 extern zend_class_entry *mffi_ce_library;
 extern zend_class_entry *mffi_ce_function;
 extern zend_class_entry *mffi_ce_exception;
+extern zend_class_entry *mffi_ce_type;
 
 #define PHP_MFFI_ERROR_HANDLING() \
 	zend_error_handling error_handling; \

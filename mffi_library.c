@@ -45,14 +45,19 @@ PHP_METHOD(MFFI_Library, __construct)
 /* {{{ */
 PHP_METHOD(MFFI_Library, bind)
 {
-	zend_string *func_name;
-	void *handle;
-	php_mffi_library_object *intern;
-	php_mffi_function_object *function;
-	char *err;
+	zend_string *func_name = NULL;
+	zval *args = NULL, *current_arg = NULL;
+	HashTable *args_hash = NULL;
+	long return_type = 0;
+	php_mffi_library_object *intern = NULL;
+	php_mffi_function_object *function = NULL;
+	zend_long num_key = 0, i = 0;
+	zend_string *string_key = NULL;
+	void *handle = NULL;
+	char *err = NULL;
 
 	PHP_MFFI_ERROR_HANDLING();
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &func_name) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|al", &func_name, &args, &return_value) == FAILURE) {
 		PHP_MFFI_RESTORE_ERRORS();
 		return;
 	}
@@ -76,6 +81,80 @@ PHP_METHOD(MFFI_Library, bind)
 	}
 
 	function->function = handle;
+
+	args_hash = Z_ARRVAL_P(args);
+	function->arg_count = zend_hash_num_elements(args_hash);
+	function->arg_types = ecalloc(function->arg_count, sizeof(ffi_type));
+
+	ZEND_HASH_FOREACH_VAL(args_hash, current_arg) {
+		if (Z_TYPE_P(current_arg) != IS_LONG) {
+			zend_throw_exception(mffi_ce_exception, "That wasn't a long, stop it", 1);
+			return;
+		}
+
+		switch(Z_LVAL_P(current_arg)) {
+		case FFI_TYPE_VOID:
+			function->arg_types[i] = &ffi_type_void;
+			break;
+
+		case FFI_TYPE_INT:
+			function->arg_types[i] = &ffi_type_sint;
+			break;
+
+		case FFI_TYPE_FLOAT:
+			function->arg_types[i] = &ffi_type_float;
+			break;
+
+		case FFI_TYPE_DOUBLE:
+			function->arg_types[i] = &ffi_type_longdouble;
+			break;
+
+		case FFI_TYPE_LONGDOUBLE:
+			function->arg_types[i] = &ffi_type_longdouble;
+			break;
+
+		case FFI_TYPE_UINT8:
+			function->arg_types[i] = &ffi_type_uint8;
+			break;
+
+		case FFI_TYPE_SINT8:
+			function->arg_types[i] = &ffi_type_sint8;
+			break;
+
+		case FFI_TYPE_UINT16:
+			function->arg_types[i] = &ffi_type_uint16;
+			break;
+
+		case FFI_TYPE_SINT16:
+			function->arg_types[i] = &ffi_type_sint16;
+			break;
+
+		case FFI_TYPE_UINT32:
+			function->arg_types[i] = &ffi_type_uint32;
+			break;
+
+		case FFI_TYPE_SINT32:
+			function->arg_types[i] = &ffi_type_sint32;
+			break;
+
+		case FFI_TYPE_UINT64:
+			function->arg_types[i] = &ffi_type_uint64;
+			break;
+
+		case FFI_TYPE_SINT64:
+			function->arg_types[i] = &ffi_type_sint64;
+			break;
+
+		case FFI_TYPE_STRUCT:
+		case FFI_TYPE_POINTER:
+		default:
+			zend_throw_exception(mffi_ce_exception, "Unimplemented type", 1);
+			return;
+		}
+
+		i++;
+	} ZEND_HASH_FOREACH_END();
+
 }
 /* }}} */
 

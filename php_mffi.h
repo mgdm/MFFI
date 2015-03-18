@@ -54,6 +54,10 @@ typedef struct _php_mffi_library_object {
 typedef struct _php_mffi_function_object {
 	void *function;
 	zval *library_zval;
+	ffi_type *return_type;
+	ffi_type **arg_types;
+	long arg_count;
+
 	zend_object std;
 } php_mffi_function_object;
 
