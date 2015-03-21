@@ -78,13 +78,13 @@ static ffi_type *php_mffi_get_type(long type) {
 /* {{{ */
 PHP_METHOD(MFFI_Library, __construct)
 {
-	zend_string *lib_name;
-	void *handle;
-	php_mffi_library_object *intern;
-	zval *self;
+	zend_string *lib_name = NULL;
+	void *handle = NULL;
+	php_mffi_library_object *intern = NULL;
+	zval *self = NULL;
 
 	PHP_MFFI_ERROR_HANDLING();
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &lib_name) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|S", &lib_name) == FAILURE) {
 		PHP_MFFI_RESTORE_ERRORS();
 		return;
 	}
@@ -92,7 +92,12 @@ PHP_METHOD(MFFI_Library, __construct)
 
 	PHP_MFFI_LIBRARY_FROM_OBJECT(intern, getThis());
 
-	handle = dlopen(lib_name->val, RTLD_LAZY);
+	if (lib_name != NULL) {
+		handle = dlopen(lib_name->val, RTLD_LAZY);
+	} else {
+		handle = dlopen(NULL, RTLD_LAZY);
+	}
+
 	if (!handle) {
 		zend_throw_exception(mffi_ce_exception, "Could not open library", 1);
 		return;
