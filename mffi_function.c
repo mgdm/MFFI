@@ -14,10 +14,10 @@ zend_class_entry *mffi_ce_function;
 
 static zend_object_handlers mffi_function_object_handlers;
 
-/* {{{ PHP_METHOD(MFFI_Function, __construct) */
-PHP_METHOD(MFFI_Function, __construct)
+/* {{{ PHP_METHOD(MFFI_Func, __construct) */
+PHP_METHOD(MFFI_Func, __construct)
 {
-	zend_throw_exception(mffi_ce_exception, "MFFI\\Function cannot be constructed directly", 1);
+	zend_throw_exception(mffi_ce_exception, "MFFI\\Func cannot be constructed directly", 1);
 }
 /* }}} */
 
@@ -138,7 +138,7 @@ static void php_mffi_free_argument(php_mffi_value *arg, long type) {
 }
 
 /* {{{ */
-PHP_METHOD(MFFI_Function, __invoke)
+PHP_METHOD(MFFI_Func, __invoke)
 {
 	zval *args = NULL, *current_arg = NULL;
 	long arg_count = 0, i = 0;
@@ -184,8 +184,8 @@ PHP_METHOD(MFFI_Function, __invoke)
 
 /* {{{ */
 const zend_function_entry mffi_function_methods[] = {
-	PHP_ME(MFFI_Function, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR|ZEND_ACC_FINAL)
-	PHP_ME(MFFI_Function, __invoke, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(MFFI_Func, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR|ZEND_ACC_FINAL)
+	PHP_ME(MFFI_Func, __invoke, NULL, ZEND_ACC_PUBLIC)
 	PHP_FE_END
 };
 /* }}} */
@@ -238,7 +238,7 @@ PHP_MINIT_FUNCTION(mffi_function)
 	mffi_function_object_handlers.free_obj = mffi_function_object_free_storage;
 	mffi_function_object_handlers.clone_obj = NULL;
 
-	INIT_NS_CLASS_ENTRY(function_ce, "MFFI", "Function", mffi_function_methods);
+	INIT_NS_CLASS_ENTRY(function_ce, "MFFI", "Func", mffi_function_methods);
 	function_ce.create_object = mffi_function_object_new;
 	mffi_ce_function = zend_register_internal_class(&function_ce);
 

@@ -1,5 +1,5 @@
 --TEST--
-MFFI\Function::__construct()
+MFFI\Func::__construct()
 --SKIPIF--
 if (!extension_loaded('mffi')) die('skip - MFFI extension not available');
 --FILE--
