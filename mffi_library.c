@@ -18,55 +18,45 @@ static ffi_type *php_mffi_get_type(long type) {
 	switch(type) {
 		case FFI_TYPE_VOID:
 			return &ffi_type_void;
-			break;
 
 		case FFI_TYPE_INT:
 			return &ffi_type_sint;
-			break;
 
 		case FFI_TYPE_FLOAT:
 			return &ffi_type_float;
-			break;
 
 		case FFI_TYPE_DOUBLE:
 			return &ffi_type_double;
-			break;
 
 		case FFI_TYPE_LONGDOUBLE:
 			return &ffi_type_longdouble;
-			break;
 
 		case FFI_TYPE_UINT8:
 			return &ffi_type_uint8;
-			break;
 
 		case FFI_TYPE_SINT8:
 			return &ffi_type_sint8;
-			break;
 
 		case FFI_TYPE_UINT16:
 			return &ffi_type_uint16;
-			break;
 
 		case FFI_TYPE_SINT16:
 			return &ffi_type_sint16;
-			break;
 
 		case FFI_TYPE_UINT32:
 			return &ffi_type_uint32;
-			break;
 
 		case FFI_TYPE_SINT32:
 			return &ffi_type_sint32;
-			break;
 
 		case FFI_TYPE_UINT64:
 			return &ffi_type_uint64;
-			break;
 
 		case FFI_TYPE_SINT64:
 			return &ffi_type_sint64;
-			break;
+
+		case PHP_MFFI_TYPE_STRING:
+			return &ffi_type_pointer;
 
 		case FFI_TYPE_STRUCT:
 		case FFI_TYPE_POINTER:

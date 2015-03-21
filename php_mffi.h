@@ -54,6 +54,7 @@ typedef union _php_mffi_value {
 	double d;
 	long double D;
 	void *p;
+	char *s;
 } php_mffi_value;
 
 typedef struct _php_mffi_library_object {
@@ -73,6 +74,8 @@ typedef struct _php_mffi_function_object {
 
 	zend_object std;
 } php_mffi_function_object;
+
+#define PHP_MFFI_TYPE_STRING 64
 
 #endif	/* PHP_mffi_H */
 

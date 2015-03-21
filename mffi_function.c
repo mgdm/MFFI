@@ -14,7 +14,7 @@ zend_class_entry *mffi_ce_function;
 
 static zend_object_handlers mffi_function_object_handlers;
 
-/* {{{ */
+/* {{{ PHP_METHOD(MFFI_Function, __construct) */
 PHP_METHOD(MFFI_Function, __construct)
 {
 	zend_throw_exception(mffi_ce_exception, "MFFI\\Function cannot be constructed directly", 1);
@@ -74,12 +74,19 @@ static void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
 			dest->l = Z_LVAL(tmp);
 			break;
 
+		case PHP_MFFI_TYPE_STRING:
+			convert_to_string(&tmp);
+			dest->s = estrdup(Z_STRVAL(tmp));
+			break;
+
 		case FFI_TYPE_STRUCT:
 		case FFI_TYPE_POINTER:
 		default:
 			zend_throw_exception(mffi_ce_exception, "Unimplemented type", 1);
-			return;
+			break;
 	}	
+
+	zval_dtor(&tmp);
 }
 
 static inline void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long type) {
@@ -114,9 +121,19 @@ static inline void php_mffi_set_return_value(zval *return_value, php_mffi_value 
 			ZVAL_LONG(return_value, result->l);
 			break;
 
+		case PHP_MFFI_TYPE_STRING:
+			ZVAL_STRING(return_value, result->s);
+			break;
+
 		default:
 			ZVAL_NULL(return_value);
 			break;
+	}
+}
+
+static void php_mffi_free_argument(php_mffi_value *arg, long type) {
+	if (type == PHP_MFFI_TYPE_STRING) {
+		efree(arg->s);
 	}
 }
 
@@ -154,6 +171,11 @@ PHP_METHOD(MFFI_Function, __invoke)
 	ffi_call(&intern->cif, intern->function, &ret_value, value_pointers);
 
 	php_mffi_set_return_value(return_value, &ret_value, intern->php_return_type);
+
+	/* Free the string arguments */
+	for (i = 0; i < arg_count; i++) {
+		php_mffi_free_argument(&values[i], intern->php_arg_types[i]);
+	}
 
 	efree(values);
 	efree(value_pointers);

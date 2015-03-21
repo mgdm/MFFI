@@ -10,13 +10,26 @@ $handle = new MFFI\Library();
 var_dump($handle);
 
 try {
-$handle = new MFFI\Library('Nonsense');
+    $handle = new MFFI\Library('Nonsense');
 } catch (MFFI\Exception $e) {
-    echo "Caught exception: ", $e->getMessage();
+    echo "Caught exception: ", $e->getMessage(), "\n";
 }
+
+switch (php_uname('s')) {
+    case "Darwin":
+        $handle = new MFFI\Library('libSystem.B.dylib');
+        break;
+    case "Linux":
+        $handle = new MFFI\Library('libc.so.6');
+        break;
+}
+
+var_dump($handle);
 
 ?>
 --EXPECTF--
-object(MFFI\Library)#1 (0) {
+object(MFFI\Library)#%d (0) {
 }
 Caught exception: Could not open library
+object(MFFI\Library)#%d (0) {
+}
