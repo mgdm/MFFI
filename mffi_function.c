@@ -89,48 +89,6 @@ static void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
 	zval_dtor(&tmp);
 }
 
-static inline void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long type) {
-	switch (type) {
-		case FFI_TYPE_INT:
-			ZVAL_LONG(return_value, result->i);
-			break;
-
-		case FFI_TYPE_FLOAT:
-			ZVAL_DOUBLE(return_value, result->f);
-			break;
-
-		case FFI_TYPE_DOUBLE:
-			ZVAL_DOUBLE(return_value, result->d);
-			break;
-
-		case FFI_TYPE_LONGDOUBLE:
-			ZVAL_DOUBLE(return_value, result->D);
-			break;
-
-		case FFI_TYPE_UINT8:
-		case FFI_TYPE_SINT8:
-		case FFI_TYPE_UINT16:
-		case FFI_TYPE_SINT16:
-			ZVAL_LONG(return_value, result->i);
-			break;
-
-		case FFI_TYPE_UINT32:
-		case FFI_TYPE_SINT32:
-		case FFI_TYPE_UINT64:
-		case FFI_TYPE_SINT64:
-			ZVAL_LONG(return_value, result->l);
-			break;
-
-		case PHP_MFFI_TYPE_STRING:
-			ZVAL_STRING(return_value, result->s);
-			break;
-
-		default:
-			ZVAL_NULL(return_value);
-			break;
-	}
-}
-
 static void php_mffi_free_argument(php_mffi_value *arg, long type) {
 	if (type == PHP_MFFI_TYPE_STRING) {
 		efree(arg->s);
@@ -140,7 +98,7 @@ static void php_mffi_free_argument(php_mffi_value *arg, long type) {
 /* {{{ */
 PHP_METHOD(MFFI_Func, __invoke)
 {
-	zval *args = NULL, *current_arg = NULL;
+	zval *args = NULL;
 	long arg_count = 0, i = 0;
 	php_mffi_function_object *intern;
 	php_mffi_value ret_value, *values;

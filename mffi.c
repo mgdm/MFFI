@@ -17,6 +17,100 @@ zend_class_entry *mffi_ce_type;
 
 ZEND_DECLARE_MODULE_GLOBALS(mffi)
 
+ffi_type *php_mffi_get_type(long type) {
+	switch(type) {
+		case FFI_TYPE_VOID:
+			return &ffi_type_void;
+
+		case FFI_TYPE_INT:
+			return &ffi_type_sint;
+
+		case FFI_TYPE_FLOAT:
+			return &ffi_type_float;
+
+		case FFI_TYPE_DOUBLE:
+			return &ffi_type_double;
+
+		case FFI_TYPE_LONGDOUBLE:
+			return &ffi_type_longdouble;
+
+		case FFI_TYPE_UINT8:
+			return &ffi_type_uint8;
+
+		case FFI_TYPE_SINT8:
+			return &ffi_type_sint8;
+
+		case FFI_TYPE_UINT16:
+			return &ffi_type_uint16;
+
+		case FFI_TYPE_SINT16:
+			return &ffi_type_sint16;
+
+		case FFI_TYPE_UINT32:
+			return &ffi_type_uint32;
+
+		case FFI_TYPE_SINT32:
+			return &ffi_type_sint32;
+
+		case FFI_TYPE_UINT64:
+			return &ffi_type_uint64;
+
+		case FFI_TYPE_SINT64:
+			return &ffi_type_sint64;
+
+		case PHP_MFFI_TYPE_STRING:
+			return &ffi_type_pointer;
+
+		case FFI_TYPE_STRUCT:
+		case FFI_TYPE_POINTER:
+		default:
+			return NULL;
+	}
+}
+
+void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long type) {
+	switch (type) {
+		case FFI_TYPE_INT:
+			ZVAL_LONG(return_value, result->i);
+			break;
+
+		case FFI_TYPE_FLOAT:
+			ZVAL_DOUBLE(return_value, result->f);
+			break;
+
+		case FFI_TYPE_DOUBLE:
+			ZVAL_DOUBLE(return_value, result->d);
+			break;
+
+		case FFI_TYPE_LONGDOUBLE:
+			ZVAL_DOUBLE(return_value, result->D);
+			break;
+
+		case FFI_TYPE_UINT8:
+		case FFI_TYPE_SINT8:
+		case FFI_TYPE_UINT16:
+		case FFI_TYPE_SINT16:
+			ZVAL_LONG(return_value, result->i);
+			break;
+
+		case FFI_TYPE_UINT32:
+		case FFI_TYPE_SINT32:
+		case FFI_TYPE_UINT64:
+		case FFI_TYPE_SINT64:
+			ZVAL_LONG(return_value, result->l);
+			break;
+
+		case PHP_MFFI_TYPE_STRING:
+			ZVAL_STRING(return_value, result->s);
+			break;
+
+		default:
+			ZVAL_NULL(return_value);
+			break;
+	}
+}
+
+
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(mffi)
 {
@@ -27,6 +121,9 @@ PHP_MINIT_FUNCTION(mffi)
 
 	INIT_NS_CLASS_ENTRY(type_ce, "MFFI", "Type", NULL);
 	mffi_ce_type = zend_register_internal_class(&type_ce);
+
+	ALLOC_HASHTABLE(MFFI_G(struct_definitions));
+    zend_hash_init(MFFI_G(struct_definitions), 8, NULL, NULL, 0);
 
 	#define REGISTER_MFFI_TYPE_LONG_CONST(const_name, value) \
 	zend_declare_class_constant_long(mffi_ce_type, const_name, sizeof(const_name)-1, (long)value TSRMLS_CC); \
@@ -51,6 +148,7 @@ PHP_MINIT_FUNCTION(mffi)
 
 	PHP_MINIT(mffi_library)(INIT_FUNC_ARGS_PASSTHRU);
 	PHP_MINIT(mffi_function)(INIT_FUNC_ARGS_PASSTHRU);
+	PHP_MINIT(mffi_struct)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 }
@@ -113,7 +211,11 @@ zend_module_entry mffi_module_entry = {
 	NULL,
 	PHP_MINFO(mffi),
 	PHP_MFFI_VERSION,
-	STANDARD_MODULE_PROPERTIES
+	PHP_MODULE_GLOBALS(mffi),
+	NULL,
+	NULL,
+	NULL,
+	STANDARD_MODULE_PROPERTIES_EX
 };
 /* }}} */
 

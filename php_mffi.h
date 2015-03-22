@@ -9,11 +9,11 @@ extern zend_module_entry mffi_module_entry;
 #define PHP_MFFI_VERSION "0.1.0" /* Replace with version number for your extension */
 
 #ifdef PHP_WIN32
-#	define PHP_mffi_API __declspec(dllexport)
+#	define PHP_MFFI_API __declspec(dllexport)
 #elif defined(__GNUC__) && __GNUC__ >= 4
-#	define PHP_mffi_API __attribute__ ((visibility("default")))
+#	define PHP_MFFI_API __attribute__ ((visibility("default")))
 #else
-#	define PHP_mffi_API
+#	define PHP_MFFI_API
 #endif
 
 #ifdef ZTS
@@ -21,7 +21,7 @@ extern zend_module_entry mffi_module_entry;
 #endif
 
 ZEND_BEGIN_MODULE_GLOBALS(mffi)
-	zend_error_handling mffi_original_error_handling;
+	HashTable *struct_definitions;
 ZEND_END_MODULE_GLOBALS(mffi)
 
 ZEND_EXTERN_MODULE_GLOBALS(mffi)
@@ -43,6 +43,7 @@ ZEND_TSRMLS_CACHE_EXTERN();
 PHP_MINIT_FUNCTION(mffi);
 PHP_MINIT_FUNCTION(mffi_library);
 PHP_MINIT_FUNCTION(mffi_function);
+PHP_MINIT_FUNCTION(mffi_struct);
 PHP_MSHUTDOWN_FUNCTION(mffi);
 PHP_MINIT_FUNCTION(mffi);
 
@@ -74,6 +75,19 @@ typedef struct _php_mffi_function_object {
 
 	zend_object std;
 } php_mffi_function_object;
+
+typedef struct _php_mffi_struct_object {
+	ffi_type type;
+	ffi_type **elements;
+	long *php_types;
+	long *element_types;
+	long element_count;
+	size_t struct_size;
+	HashTable element_hash;
+	void *data;
+
+	zend_object std;
+} php_mffi_struct_object;
 
 #define PHP_MFFI_TYPE_STRING 64
 

@@ -14,64 +14,12 @@ zend_class_entry *mffi_ce_library;
 
 static zend_object_handlers mffi_library_object_handlers;
 
-static ffi_type *php_mffi_get_type(long type) {
-	switch(type) {
-		case FFI_TYPE_VOID:
-			return &ffi_type_void;
-
-		case FFI_TYPE_INT:
-			return &ffi_type_sint;
-
-		case FFI_TYPE_FLOAT:
-			return &ffi_type_float;
-
-		case FFI_TYPE_DOUBLE:
-			return &ffi_type_double;
-
-		case FFI_TYPE_LONGDOUBLE:
-			return &ffi_type_longdouble;
-
-		case FFI_TYPE_UINT8:
-			return &ffi_type_uint8;
-
-		case FFI_TYPE_SINT8:
-			return &ffi_type_sint8;
-
-		case FFI_TYPE_UINT16:
-			return &ffi_type_uint16;
-
-		case FFI_TYPE_SINT16:
-			return &ffi_type_sint16;
-
-		case FFI_TYPE_UINT32:
-			return &ffi_type_uint32;
-
-		case FFI_TYPE_SINT32:
-			return &ffi_type_sint32;
-
-		case FFI_TYPE_UINT64:
-			return &ffi_type_uint64;
-
-		case FFI_TYPE_SINT64:
-			return &ffi_type_sint64;
-
-		case PHP_MFFI_TYPE_STRING:
-			return &ffi_type_pointer;
-
-		case FFI_TYPE_STRUCT:
-		case FFI_TYPE_POINTER:
-		default:
-			return NULL;
-	}
-}		
-
 /* {{{ */
 PHP_METHOD(MFFI_Library, __construct)
 {
 	zend_string *lib_name = NULL;
 	void *handle = NULL;
 	php_mffi_library_object *intern = NULL;
-	zval *self = NULL;
 
 	PHP_MFFI_ERROR_HANDLING();
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|S", &lib_name) == FAILURE) {
@@ -106,8 +54,7 @@ PHP_METHOD(MFFI_Library, bind)
 	long return_type = 0;
 	php_mffi_library_object *intern = NULL;
 	php_mffi_function_object *function = NULL;
-	zend_long num_key = 0, i = 0;
-	zend_string *string_key = NULL;
+	zend_long i = 0;
 	ffi_status status;
 	void *handle = NULL;
 	char *err = NULL;
@@ -144,8 +91,8 @@ PHP_METHOD(MFFI_Library, bind)
 	function->php_arg_types = ecalloc(function->arg_count, sizeof(long));
 
 	ZEND_HASH_FOREACH_VAL(args_hash, current_arg) {
-		if (Z_TYPE_P(current_arg) != IS_LONG) {
-			zend_throw_exception(mffi_ce_exception, "That wasn't a long, stop it", 1);
+		if (Z_TYPE_P(current_arg) != IS_LONG && Z_TYPE_P(current_arg) != IS_OBJECT) {
+			zend_throw_exception(mffi_ce_exception, "Unsupported type", 1);
 			return;
 		}
 
