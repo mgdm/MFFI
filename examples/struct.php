@@ -17,4 +17,6 @@ MFFI\Struct::define('TimeStruct', [
 
 $tm = new TimeStruct();
 var_dump($tm);
-var_dump($tm->tm_zone);
+var_dump($tm->tm_sec);
+var_dump($tm->tm_isdst);
+var_dump($tm->doesnotexist);

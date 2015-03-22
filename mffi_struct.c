@@ -14,6 +14,25 @@ zend_class_entry *mffi_ce_struct;
 
 static zend_object_handlers mffi_struct_object_handlers;
 
+/* {{{ PHP_METHOD(MFFI_Struct, __construct */
+PHP_METHOD(MFFI_Struct, __construct)
+{
+	php_mffi_struct_object *intern = NULL;
+
+	PHP_MFFI_ERROR_HANDLING();
+	if (zend_parse_parameters_none() == FAILURE) {
+		PHP_MFFI_RESTORE_ERRORS();
+		return;
+	}
+	PHP_MFFI_RESTORE_ERRORS();
+
+	PHP_MFFI_STRUCT_FROM_OBJECT(intern, getThis());
+
+    intern->data = ecalloc(1, intern->struct_size);
+}
+
+/* }}} */
+
 /* {{{ PHP_METHOD(MFFI_Struct, define) */
 PHP_METHOD(MFFI_Struct, define)
 {
@@ -74,6 +93,7 @@ PHP_METHOD(MFFI_Struct, define)
 
     template->elements[template->element_count] = NULL;
     template->type.elements = template->elements;
+    template->struct_size = struct_size;
     zend_hash_add_ptr(MFFI_G(struct_definitions), class_name, template);
 
 	INIT_CLASS_ENTRY_EX(new_class, class_name->val, class_name->len, NULL);
@@ -84,6 +104,7 @@ PHP_METHOD(MFFI_Struct, define)
 /* {{{ */
 const zend_function_entry mffi_struct_methods[] = {
 	PHP_ME(MFFI_Struct, define, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	PHP_ME(MFFI_Struct, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_FE_END
 };
 /* }}} */
@@ -130,34 +151,15 @@ static void mffi_struct_object_free_storage(zend_object *object)
 /* }}} */
 
 /* {{{ */
-static HashTable *php_mffi_struct_get_properties(zval *object) {
-    php_mffi_struct_object *intern;
-    zend_string *key;
-    ffi_type *type;
-    HashTable *props;
-    zval *val = ecalloc(1, sizeof(zval));
-
-    PHP_MFFI_STRUCT_FROM_OBJECT(intern, object);
-    props = zend_std_get_properties(object);
-    ZVAL_LONG(val, 0);
-	
-    ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->element_hash, key, type) {
-        zend_hash_update(props, key, val);
-    } ZEND_HASH_FOREACH_END();
-    
-    return intern->std.properties;
-}
-/* }}} */
-
-/* {{{ */
 static zval *php_mffi_struct_read_property(zval *object, zval *member, int type, void **cache_slot, zval *rv) {
     php_mffi_struct_object *intern;
     php_mffi_value *val;
-    zval tmp, *retval;
-    long index = 0, offset = 0;
+    zval tmp;
+    long index = 0, offset = 0, found = 0;
     ffi_type *ffi_type;
     zend_string *current_key;
-    char *member_key, *data = NULL;
+    char *member_key;
+    char *data;
 
     if (Z_TYPE_P(member) != IS_STRING) {
         tmp = *member;
@@ -167,32 +169,53 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
     }
 
     member_key = Z_STRVAL_P(member);
-    
+
     PHP_MFFI_STRUCT_FROM_OBJECT(intern, object);
 
     /* TODO - there has to be a better way */
     index = offset = 0;
     ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->element_hash, current_key, ffi_type) {
-        php_printf("Looking at member %s for member %s\n", current_key->val, member_key);
         if (strncmp(member_key, current_key->val, current_key->len) == 0) {
-            php_printf("Found member %s\n", member_key);
+            found = 1;
             break;
         }
 
         offset += ffi_type->size;
-        php_printf("Offset is now %d, index is %d\n", offset, index);
         index++;
 
     } ZEND_HASH_FOREACH_END();
 
-    
+    if (!found) {
+        rv = &EG(uninitialized_zval);
+        return rv;
+    }
+
     data = (char *) intern->data;
     data += offset;
     val = (php_mffi_value *) data;
 
-    retval = ecalloc(1, sizeof(zval));
-    php_mffi_set_return_value(retval, val, intern->php_types[index]);
-    return retval;
+    php_mffi_set_return_value(rv, val, 1);
+    return rv;
+}
+/* }}} */
+
+/* {{{ */
+static HashTable *php_mffi_struct_get_properties(zval *object) {
+    php_mffi_struct_object *intern;
+    zend_string *key;
+    ffi_type *type;
+    HashTable *props;
+    zval *val = ecalloc(1, sizeof(zval));
+    ZVAL_LONG(val, 0);
+
+    PHP_MFFI_STRUCT_FROM_OBJECT(intern, object);
+    props = zend_std_get_properties(object);
+
+    ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->element_hash, key, type) {
+        zend_hash_update(props, key, val);
+    } ZEND_HASH_FOREACH_END();
+
+    return intern->std.properties;
 }
 /* }}} */
 
