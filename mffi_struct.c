@@ -180,6 +180,7 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
             break;
         }
 
+        /* TODO - this ignores alignment rules */
         offset += ffi_type->size;
         index++;
 
@@ -190,6 +191,7 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
         return rv;
     }
 
+    /* TODO - there has to be a safer way to add bytes to a pointer? */
     data = (char *) intern->data;
     data += offset;
     val = (php_mffi_value *) data;
