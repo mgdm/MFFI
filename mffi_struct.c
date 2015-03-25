@@ -61,8 +61,9 @@ PHP_METHOD(MFFI_Struct, define)
 	element_hash = Z_ARRVAL_P(elements);
     template = ecalloc(1, sizeof(php_mffi_struct_object));
     template->element_count = zend_hash_num_elements(element_hash);
-    template->elements = ecalloc(template->element_count + 1, sizeof(ffi_type *));
-    template->php_types = ecalloc(template->element_count, sizeof(long));
+    template->elements = ecalloc(template->element_count, sizeof(php_mffi_struct_element));
+	template->element_types = ecalloc(template->element_count + 1, sizeof(ffi_type *));
+
     zend_hash_init(&template->element_hash, 8, NULL, NULL, 0);
 
 	ZEND_HASH_FOREACH_KEY_VAL(element_hash, num_key, string_key, current_elem) {
@@ -76,23 +77,27 @@ PHP_METHOD(MFFI_Struct, define)
 			return;
 		}
 
-        type = php_mffi_get_type(Z_LVAL_P(current_elem));
+		type = php_mffi_get_type(Z_LVAL_P(current_elem));
 
         if (!type) {
             zend_throw_exception(mffi_ce_exception, "Unsupported type", 1);
             return;
         }
 
-		zend_hash_add_ptr(&template->element_hash, string_key, type);
-        template->elements[i] = type;
-        template->php_types[i] = Z_LVAL_P(current_elem);
+		template->elements[i].index = i;
+		template->elements[i].php_type = Z_LVAL_P(current_elem);
+        template->elements[i].type = type;
+		template->elements[i].offset = struct_size;
         struct_size += type->size;
+		template->element_types[i] = type;
+
+		zend_hash_add_ptr(&template->element_hash, string_key, &template->elements[i]);
 		i++;
 
 	} ZEND_HASH_FOREACH_END();
 
-    template->elements[template->element_count] = NULL;
-    template->type.elements = template->elements;
+    template->element_types[template->element_count] = NULL;
+    template->type.elements = template->element_types;
     template->struct_size = struct_size;
     zend_hash_add_ptr(MFFI_G(struct_definitions), class_name, template);
 
@@ -145,6 +150,16 @@ static void mffi_struct_object_free_storage(zend_object *object)
 	if (!intern) {
 		return;
 	}
+
+	if (intern->elements != NULL) {
+		efree(intern->elements);
+	}
+	
+	if (intern->element_types != NULL) {
+		efree(intern->element_types);
+	}
+
+	zend_hash_destroy(&intern->element_hash);
 
 	zend_object_std_dtor(&intern->std);
 }
@@ -205,16 +220,19 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
 static HashTable *php_mffi_struct_get_properties(zval *object) {
     php_mffi_struct_object *intern;
     zend_string *key;
-    ffi_type *type;
+	php_mffi_struct_element *element;
     HashTable *props;
-    zval *val = ecalloc(1, sizeof(zval));
-    ZVAL_LONG(val, 0);
+    zval ret;
+	size_t data;
 
     PHP_MFFI_STRUCT_FROM_OBJECT(intern, object);
     props = zend_std_get_properties(object);
 
-    ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->element_hash, key, type) {
-        zend_hash_update(props, key, val);
+    ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->element_hash, key, element) {
+		data = (size_t) intern->data;
+		data += element->offset;	
+		php_mffi_set_return_value(&ret, (php_mffi_value *) data, element->php_type);
+        zend_hash_update(props, key, &ret);
     } ZEND_HASH_FOREACH_END();
 
     return intern->std.properties;

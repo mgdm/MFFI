@@ -101,7 +101,12 @@ void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long 
 			break;
 
 		case PHP_MFFI_TYPE_STRING:
-			ZVAL_STRING(return_value, result->s);
+			if (result->s != NULL) {
+				ZVAL_STRING(return_value, result->s);
+			} else {
+				ZVAL_NULL(return_value);
+			}
+
 			break;
 
 		default:

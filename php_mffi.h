@@ -76,14 +76,21 @@ typedef struct _php_mffi_function_object {
 	zend_object std;
 } php_mffi_function_object;
 
+typedef struct _php_mffi_struct_element {
+    long index;
+    long php_type;
+    size_t offset;
+    ffi_type *type;
+} php_mffi_struct_element;
+
 typedef struct _php_mffi_struct_object {
 	ffi_type type;
-	ffi_type **elements;
-	long *php_types;
-	long *element_types;
+	php_mffi_struct_element *elements;
+	HashTable element_hash;
+	ffi_type **element_types;
+
 	long element_count;
 	size_t struct_size;
-	HashTable element_hash;
 	void *data;
 
 	zend_object std;
