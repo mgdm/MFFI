@@ -77,10 +77,10 @@ typedef struct _php_mffi_function_object {
 } php_mffi_function_object;
 
 typedef struct _php_mffi_struct_element {
-    long index;
-    long php_type;
-    size_t offset;
-    ffi_type *type;
+	long index;
+	long php_type;
+	size_t offset;
+	ffi_type *type;
 } php_mffi_struct_element;
 
 typedef struct _php_mffi_struct_object {

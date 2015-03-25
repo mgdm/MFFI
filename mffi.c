@@ -128,7 +128,7 @@ PHP_MINIT_FUNCTION(mffi)
 	mffi_ce_type = zend_register_internal_class(&type_ce);
 
 	ALLOC_HASHTABLE(MFFI_G(struct_definitions));
-    zend_hash_init(MFFI_G(struct_definitions), 8, NULL, NULL, 0);
+	zend_hash_init(MFFI_G(struct_definitions), 8, NULL, NULL, 0);
 
 	#define REGISTER_MFFI_TYPE_LONG_CONST(const_name, value) \
 	zend_declare_class_constant_long(mffi_ce_type, const_name, sizeof(const_name)-1, (long)value TSRMLS_CC); \
