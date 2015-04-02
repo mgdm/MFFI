@@ -203,11 +203,12 @@ PHP_RSHUTDOWN_FUNCTION(mffi)
 			efree(elem);
 		} ZEND_HASH_FOREACH_END();
 
-		zend_hash_clean(&def->element_hash);
+		zend_hash_destroy(&def->element_hash);
 		efree(def);
 
 	} ZEND_HASH_FOREACH_END();
 
+	zend_hash_destroy(MFFI_G(struct_definitions));
 	return SUCCESS;
 }
 /* }}} */
