@@ -152,6 +152,10 @@ static void mffi_struct_object_free_storage(zend_object *object)
 		return;
 	}
 
+	if (intern->data != NULL) {
+		efree(intern->data);
+	}
+
 	zend_object_std_dtor(&intern->std);
 }
 /* }}} */

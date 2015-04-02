@@ -17,7 +17,7 @@ MFFI\Struct::define('TimeStruct', [
 
 $tm = new TimeStruct();
 var_dump($tm);
-
+/*
 var_dump("tm_sec", $tm->tm_sec);
 var_dump("tm_isdst", $tm->tm_isdst);
 var_dump("doesnotexist", $tm->doesnotexist);
@@ -25,3 +25,4 @@ var_dump("isset tm_sec", isset($tm->tm_sec));
 var_dump("isset nope", isset($tm->nope));
 var_dump("empty tm_sec", empty($tm->tm_sec));
 var_dump("empty nope", empty($tm->nope));
+ */

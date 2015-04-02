@@ -127,9 +127,6 @@ PHP_MINIT_FUNCTION(mffi)
 	INIT_NS_CLASS_ENTRY(type_ce, "MFFI", "Type", NULL);
 	mffi_ce_type = zend_register_internal_class(&type_ce);
 
-	ALLOC_HASHTABLE(MFFI_G(struct_definitions));
-	zend_hash_init(MFFI_G(struct_definitions), 8, NULL, NULL, 0);
-
 	#define REGISTER_MFFI_TYPE_LONG_CONST(const_name, value) \
 	zend_declare_class_constant_long(mffi_ce_type, const_name, sizeof(const_name)-1, (long)value TSRMLS_CC); \
 	REGISTER_LONG_CONSTANT(#value,  value,  CONST_CS | CONST_PERSISTENT);
@@ -170,10 +167,24 @@ PHP_MSHUTDOWN_FUNCTION(mffi)
 /* {{{ PHP_RINIT_FUNCTION */
 PHP_RINIT_FUNCTION(mffi)
 {
+	return SUCCESS;
+}
+/* }}} */
+
+/* {{{ PHP_GINIT_FUNCTION(mffi) */
+static PHP_GINIT_FUNCTION(mffi)
+{
 #if defined(COMPILE_DL_MFFI) && defined(ZTS)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
-	return SUCCESS;
+	ALLOC_HASHTABLE(MFFI_G(struct_definitions));
+	zend_hash_init(MFFI_G(struct_definitions), 8, NULL, NULL, 0);
+}
+/* }}} */
+
+/* {{{ PHP_GSHUTDOWN_FUNCTION */
+static PHP_GSHUTDOWN_FUNCTION(mffi)
+{
 }
 /* }}} */
 
@@ -181,6 +192,22 @@ PHP_RINIT_FUNCTION(mffi)
 /* {{{ PHP_RSHUTDOWN_FUNCTION */
 PHP_RSHUTDOWN_FUNCTION(mffi)
 {
+	php_mffi_struct_definition *def;
+	php_mffi_struct_element *elem;
+
+	ZEND_HASH_FOREACH_PTR(MFFI_G(struct_definitions), def) {
+		efree(def->elements);
+		efree(def->element_types);
+
+		ZEND_HASH_FOREACH_PTR(&def->element_hash, elem) {
+			efree(elem);
+		} ZEND_HASH_FOREACH_END();
+
+		zend_hash_clean(&def->element_hash);
+		efree(def);
+
+	} ZEND_HASH_FOREACH_END();
+
 	return SUCCESS;
 }
 /* }}} */
@@ -212,13 +239,13 @@ zend_module_entry mffi_module_entry = {
 	mffi_functions,
 	PHP_MINIT(mffi),
 	PHP_MSHUTDOWN(mffi),
-	NULL,
-	NULL,
+	PHP_RINIT(mffi),
+	PHP_RSHUTDOWN(mffi),
 	PHP_MINFO(mffi),
 	PHP_MFFI_VERSION,
 	PHP_MODULE_GLOBALS(mffi),
-	NULL,
-	NULL,
+	PHP_GINIT(mffi),
+	PHP_GSHUTDOWN(mffi),
 	NULL,
 	STANDARD_MODULE_PROPERTIES_EX
 };
