@@ -28,7 +28,7 @@ PHP_METHOD(MFFI_Struct, __construct)
 
 	PHP_MFFI_STRUCT_FROM_OBJECT(intern, getThis());
 
-	intern->data = ecalloc(1, intern->struct_size);
+	intern->data = ecalloc(1, intern->template->struct_size);
 }
 
 /* }}} */
@@ -44,7 +44,7 @@ PHP_METHOD(MFFI_Struct, define)
 	zend_ulong num_key = -1;
 	ffi_type *type;
 	zend_class_entry new_class;
-	php_mffi_struct_object *template;
+	php_mffi_struct_definition *template;
 
 	PHP_MFFI_ERROR_HANDLING();
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "Sa", &class_name, &elements) == FAILURE) {
@@ -59,7 +59,7 @@ PHP_METHOD(MFFI_Struct, define)
 	}
 
 	element_hash = Z_ARRVAL_P(elements);
-	template = ecalloc(1, sizeof(php_mffi_struct_object));
+	template = ecalloc(1, sizeof(php_mffi_struct_definition));
 	template->element_count = zend_hash_num_elements(element_hash);
 	template->elements = ecalloc(template->element_count, sizeof(php_mffi_struct_element));
 	template->element_types = ecalloc(template->element_count + 1, sizeof(ffi_type *));
@@ -124,8 +124,8 @@ php_mffi_struct_object *php_mffi_struct_fetch_object(zend_object *obj) {
 /* {{{ */
 static zend_object *mffi_struct_object_new(zend_class_entry *ce)
 {
-	php_mffi_struct_object *object, *template;
-	object = ecalloc(1, sizeof(php_mffi_struct_object) + zend_object_properties_size(ce));
+	php_mffi_struct_object *object;
+	php_mffi_struct_definition *template;
 	template = zend_hash_find_ptr(MFFI_G(struct_definitions), ce->name);
 
 	if (!template) {
@@ -133,9 +133,10 @@ static zend_object *mffi_struct_object_new(zend_class_entry *ce)
 		return NULL;
 	}
 
-	memcpy(object, template, sizeof(php_mffi_struct_object));
+	object = ecalloc(1, sizeof(php_mffi_struct_object) + zend_object_properties_size(ce));
+	object->template = template;
 
-	zend_object_std_init(&object->std, ce);
+	zend_object_std_init(&object->std, ce TSRMLS_CC);
 	object_properties_init(&object->std, ce);
 	object->std.handlers = &mffi_struct_object_handlers;
 	return &object->std;
@@ -150,16 +151,6 @@ static void mffi_struct_object_free_storage(zend_object *object)
 	if (!intern) {
 		return;
 	}
-
-	if (intern->elements != NULL) {
-		efree(intern->elements);
-	}
-	
-	if (intern->element_types != NULL) {
-		efree(intern->element_types);
-	}
-
-	zend_hash_destroy(&intern->element_hash);
 
 	zend_object_std_dtor(&intern->std);
 }
@@ -185,11 +176,11 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
 
 	member_key = Z_STRVAL_P(member);
 
-	PHP_MFFI_STRUCT_FROM_OBJECT(intern, object);
+	intern = php_mffi_struct_fetch_object(Z_OBJ_P(object));
 
 	/* TODO - there has to be a better way */
 	index = offset = 0;
-	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->element_hash, current_key, ffi_type) {
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->template->element_hash, current_key, ffi_type) {
 		if (strncmp(member_key, current_key->val, current_key->len) == 0) {
 			found = 1;
 			break;
@@ -218,17 +209,17 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
 
 /* {{{ */
 static HashTable *php_mffi_struct_get_properties(zval *object) {
-	php_mffi_struct_object *intern;
+	php_mffi_struct_object *intern = NULL;
 	zend_string *key;
 	php_mffi_struct_element *element;
 	HashTable *props;
 	zval ret;
 	size_t data;
 
-	PHP_MFFI_STRUCT_FROM_OBJECT(intern, object);
+	intern = php_mffi_struct_fetch_object(Z_OBJ_P(object));
 	props = zend_std_get_properties(object);
 
-	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->element_hash, key, element) {
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->template->element_hash, key, element) {
 		data = (size_t) intern->data;
 		data += element->offset;	
 		php_mffi_set_return_value(&ret, (php_mffi_value *) data, element->php_type);
@@ -243,7 +234,7 @@ static HashTable *php_mffi_struct_get_properties(zval *object) {
 static int php_mffi_struct_has_property(zval *object, zval *member, int has_set_exists, void **cache_slot)
 {
 	php_mffi_struct_object *intern;
-	zval tmp, *value = NULL;
+	zval tmp, val, *value = NULL;
 	int ret = 0;
 
 	PHP_MFFI_STRUCT_FROM_OBJECT(intern, object);
@@ -253,28 +244,28 @@ static int php_mffi_struct_has_property(zval *object, zval *member, int has_set_
 		member = &tmp;
 	}
 
-	if (zend_hash_find(&intern->element_hash, (zend_string *) Z_STRVAL_P(member)) == SUCCESS) {
-		switch (has_set_exists) {
-			case 2:
-				ret = 1;
-				break;
-			case 0:
-				php_mffi_struct_read_property(object, member, 0, NULL, NULL);
-				if (value != &EG(uninitialized_zval)) {
-					ret = Z_TYPE_P(value) != IS_NULL? 1:0;
-				}
-				break;
-			default:
-				value = php_mffi_struct_read_property(object, member, 0, NULL, NULL);
-				if (value != &EG(uninitialized_zval)) {
-					tmp = *value;
-					zval_copy_ctor(&tmp);
-					convert_to_boolean(&tmp);
-					ret = Z_TYPE(tmp) == IS_TRUE;
-				}
+	if (zend_hash_find(&intern->template->element_hash, Z_STR_P(member)) != SUCCESS) {
+		return 0;
+	}
 
-				break;
-		}
+	switch (has_set_exists) {
+		case 2:
+			ret = 1;
+			break;
+		case 0:
+			php_mffi_struct_read_property(object, member, 0, NULL, &val);
+			ret = Z_TYPE(val) != IS_NULL? 1:0;
+			break;
+		default:
+			value = php_mffi_struct_read_property(object, member, 0, NULL, &val);
+			if (value != &EG(uninitialized_zval)) {
+				tmp = *value;
+				zval_copy_ctor(&tmp);
+				convert_to_boolean(&tmp);
+				ret = Z_TYPE(tmp) == IS_TRUE;
+			}
+
+			break;
 	}
 
 	return ret;

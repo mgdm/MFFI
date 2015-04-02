@@ -83,18 +83,23 @@ typedef struct _php_mffi_struct_element {
 	ffi_type *type;
 } php_mffi_struct_element;
 
-typedef struct _php_mffi_struct_object {
+typedef struct _php_mffi_struct_definition {
 	ffi_type type;
 	php_mffi_struct_element *elements;
 	HashTable element_hash;
 	ffi_type **element_types;
-
 	long element_count;
 	size_t struct_size;
+} php_mffi_struct_definition;
+
+typedef struct _php_mffi_struct_object {
+	php_mffi_struct_definition *template;
+
 	void *data;
 
 	zend_object std;
 } php_mffi_struct_object;
+
 
 #define PHP_MFFI_TYPE_STRING 64
 
