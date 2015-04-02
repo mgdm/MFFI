@@ -147,12 +147,25 @@ static zend_object *mffi_struct_object_new(zend_class_entry *ce)
 static void mffi_struct_object_free_storage(zend_object *object)
 {
 	php_mffi_struct_object *intern = php_mffi_struct_fetch_object(object);
+	php_mffi_struct_element *element;
+	size_t data;
+	php_mffi_value *val;
 
 	if (!intern) {
 		return;
 	}
 
 	if (intern->data != NULL) {
+		data = (size_t) intern->data;
+		ZEND_HASH_FOREACH_PTR(&intern->template->element_hash, element) {
+			if (element->php_type == PHP_MFFI_TYPE_STRING) {
+				val = (php_mffi_value *) data;
+				efree(val->p);
+			}
+
+			data += element->offset;
+		} ZEND_HASH_FOREACH_END();
+
 		efree(intern->data);
 	}
 
@@ -163,12 +176,11 @@ static void mffi_struct_object_free_storage(zend_object *object)
 /* {{{ */
 static zval *php_mffi_struct_read_property(zval *object, zval *member, int type, void **cache_slot, zval *rv) {
 	php_mffi_struct_object *intern;
+	php_mffi_struct_element *element;
 	php_mffi_value *val;
 	zval tmp;
 	long index = 0, offset = 0, found = 0;
-	ffi_type *ffi_type;
-	zend_string *current_key;
-	char *member_key;
+	zend_string *current_key, *member_key;
 	char *data;
 
 	if (Z_TYPE_P(member) != IS_STRING) {
@@ -178,20 +190,20 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
 		member = &tmp;
 	}
 
-	member_key = Z_STRVAL_P(member);
+	member_key = Z_STR_P(member);
 
 	intern = php_mffi_struct_fetch_object(Z_OBJ_P(object));
 
 	/* TODO - there has to be a better way */
 	index = offset = 0;
-	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->template->element_hash, current_key, ffi_type) {
-		if (strncmp(member_key, current_key->val, current_key->len) == 0) {
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->template->element_hash, current_key, element) {
+		if (strncmp(member_key->val, current_key->val, current_key->len) == 0) {
 			found = 1;
 			break;
 		}
 
 		/* TODO - this ignores alignment rules */
-		offset += ffi_type->size;
+		offset += element->offset;
 		index++;
 
 	} ZEND_HASH_FOREACH_END();
@@ -206,7 +218,7 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
 	data += offset;
 	val = (php_mffi_value *) data;
 
-	php_mffi_set_return_value(rv, val, 1);
+	php_mffi_set_return_value(rv, val, element->php_type);
 	return rv;
 }
 /* }}} */
@@ -223,11 +235,11 @@ static HashTable *php_mffi_struct_get_properties(zval *object) {
 	intern = php_mffi_struct_fetch_object(Z_OBJ_P(object));
 	props = zend_std_get_properties(object);
 
+	data = (size_t) intern->data;
 	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->template->element_hash, key, element) {
-		data = (size_t) intern->data;
-		data += element->offset;	
 		php_mffi_set_return_value(&ret, (php_mffi_value *) data, element->php_type);
 		zend_hash_update(props, key, &ret);
+		data += element->offset;
 	} ZEND_HASH_FOREACH_END();
 
 	return intern->std.properties;
@@ -248,7 +260,7 @@ static int php_mffi_struct_has_property(zval *object, zval *member, int has_set_
 		member = &tmp;
 	}
 
-	if (zend_hash_find(&intern->template->element_hash, Z_STR_P(member)) != SUCCESS) {
+	if (zend_hash_find(&intern->template->element_hash, Z_STR_P(member)) == NULL) {
 		return 0;
 	}
 
@@ -276,6 +288,55 @@ static int php_mffi_struct_has_property(zval *object, zval *member, int has_set_
 }
 /* }}} */
 
+static void php_mffi_struct_write_property(zval *object, zval *member, zval *value, void **cache_slot) /* {{{ */
+{
+	php_mffi_struct_object *intern;
+	php_mffi_value *val;
+	zval tmp;
+	int index = 0, found = 0;
+	size_t data = 0, offset = 0;
+	php_mffi_struct_element *element;
+	zend_string *current_key, *member_key;
+
+	intern = php_mffi_struct_fetch_object(Z_OBJ_P(object));
+
+	if (Z_TYPE_P(member) != IS_STRING) {
+		ZVAL_STR(&tmp, zval_get_string(member));
+		member = &tmp;
+	}
+
+	member_key = Z_STR_P(member);
+
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->template->element_hash, current_key, element) {
+	} ZEND_HASH_FOREACH_END();
+
+	index = offset = 0;
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->template->element_hash, current_key, element) {
+		if (strncmp(member_key->val, current_key->val, current_key->len) == 0) {
+			found = 1;
+			break;
+		}
+
+		/* TODO - this ignores alignment rules */
+		offset += element->offset;
+		index++;
+
+	} ZEND_HASH_FOREACH_END();
+
+	if (!found) {
+		return;
+	}
+
+	/* TODO - there has to be a safer way to add bytes to a pointer? */
+	data = (size_t) intern->data;
+	data += offset;
+	val = (php_mffi_value *) data;
+
+	php_mffi_set_argument(value, val, element->php_type);
+}
+/* }}} */
+
+
 /* {{{ */
 PHP_MINIT_FUNCTION(mffi_struct)
 {
@@ -286,7 +347,7 @@ PHP_MINIT_FUNCTION(mffi_struct)
 	mffi_struct_object_handlers.free_obj = mffi_struct_object_free_storage;
 	mffi_struct_object_handlers.clone_obj = NULL;
 	mffi_struct_object_handlers.read_property = php_mffi_struct_read_property;
-//	mffi_struct_object_handlers.write_property = php_mffi_struct_write_property;
+	mffi_struct_object_handlers.write_property = php_mffi_struct_write_property;
 	mffi_struct_object_handlers.has_property = php_mffi_struct_has_property;
 	mffi_struct_object_handlers.get_properties = php_mffi_struct_get_properties;
 

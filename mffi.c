@@ -115,6 +115,74 @@ void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long 
 	}
 }
 
+void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
+	zval tmp = *arg;
+	zval_copy_ctor(&tmp);
+
+	switch(type) {
+		case FFI_TYPE_INT:
+			convert_to_long(&tmp);
+			dest->i = Z_LVAL(tmp);
+			break;
+
+		case FFI_TYPE_FLOAT:
+			convert_to_double(&tmp);
+			dest->f = Z_DVAL(tmp);
+			break;
+
+		case FFI_TYPE_DOUBLE:
+			convert_to_double(&tmp);
+			dest->d = Z_DVAL(tmp);
+			break;
+
+		case FFI_TYPE_LONGDOUBLE:
+			convert_to_double(&tmp);
+			dest->D = Z_DVAL(tmp);
+			break;
+
+		case FFI_TYPE_UINT8:
+		case FFI_TYPE_SINT8:
+			convert_to_long(&tmp);
+			dest->c = Z_LVAL(tmp);
+			break;
+
+		case FFI_TYPE_UINT16:
+		case FFI_TYPE_SINT16:
+			convert_to_long(&tmp);
+			dest->i = Z_LVAL(tmp);
+			break;
+
+		case FFI_TYPE_UINT32:
+			convert_to_long(&tmp);
+			dest->l = Z_LVAL(tmp);
+			break;
+
+		case FFI_TYPE_SINT32:
+			convert_to_long(&tmp);
+			dest->l = Z_LVAL(tmp);
+			break;
+
+		case FFI_TYPE_UINT64:
+		case FFI_TYPE_SINT64:
+			convert_to_long(&tmp);
+			dest->l = Z_LVAL(tmp);
+			break;
+
+		case PHP_MFFI_TYPE_STRING:
+			convert_to_string(&tmp);
+			dest->s = estrdup(Z_STRVAL(tmp));
+			break;
+
+		case FFI_TYPE_STRUCT:
+		case FFI_TYPE_POINTER:
+		default:
+			zend_throw_exception(mffi_ce_exception, "Unimplemented type", 1);
+			break;
+	}
+
+	zval_dtor(&tmp);
+}
+
 
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(mffi)
