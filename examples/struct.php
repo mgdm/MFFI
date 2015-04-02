@@ -20,3 +20,5 @@ var_dump($tm);
 var_dump($tm->tm_sec);
 var_dump($tm->tm_isdst);
 var_dump($tm->doesnotexist);
+var_dump(isset($tm->tm_sec));
+var_dump(isset($tm->nope));

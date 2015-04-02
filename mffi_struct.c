@@ -240,6 +240,48 @@ static HashTable *php_mffi_struct_get_properties(zval *object) {
 /* }}} */
 
 /* {{{ */
+static int php_mffi_struct_has_property(zval *object, zval *member, int has_set_exists, void **cache_slot)
+{
+	php_mffi_struct_object *intern;
+	zval tmp, *value = NULL;
+	int ret = 0;
+
+	PHP_MFFI_STRUCT_FROM_OBJECT(intern, object);
+
+	if (Z_TYPE_P(member) != IS_STRING) {
+		ZVAL_STR(&tmp, zval_get_string(member));
+		member = &tmp;
+	}
+
+	if (zend_hash_find(&intern->element_hash, (zend_string *) Z_STRVAL_P(member)) == SUCCESS) {
+		switch (has_set_exists) {
+			case 2:
+				ret = 1;
+				break;
+			case 0:
+				php_mffi_struct_read_property(object, member, 0, NULL, NULL);
+				if (value != &EG(uninitialized_zval)) {
+					ret = Z_TYPE_P(value) != IS_NULL? 1:0;
+				}
+				break;
+			default:
+				value = php_mffi_struct_read_property(object, member, 0, NULL, NULL);
+				if (value != &EG(uninitialized_zval)) {
+					tmp = *value;
+					zval_copy_ctor(&tmp);
+					convert_to_boolean(&tmp);
+					ret = Z_TYPE(tmp) == IS_TRUE;
+				}
+
+				break;
+		}
+	}
+
+	return ret;
+}
+/* }}} */
+
+/* {{{ */
 PHP_MINIT_FUNCTION(mffi_struct)
 {
 	zend_class_entry function_ce;
@@ -250,7 +292,7 @@ PHP_MINIT_FUNCTION(mffi_struct)
 	mffi_struct_object_handlers.clone_obj = NULL;
 	mffi_struct_object_handlers.read_property = php_mffi_struct_read_property;
 //	mffi_struct_object_handlers.write_property = php_mffi_struct_write_property;
-//	mffi_struct_object_handlers.has_property = php_mffi_struct_has_property;
+	mffi_struct_object_handlers.has_property = php_mffi_struct_has_property;
 	mffi_struct_object_handlers.get_properties = php_mffi_struct_get_properties;
 
 	INIT_NS_CLASS_ENTRY(function_ce, "MFFI", "Struct", mffi_struct_methods);
