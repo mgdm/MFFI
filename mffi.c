@@ -266,11 +266,6 @@ PHP_RSHUTDOWN_FUNCTION(mffi)
 	ZEND_HASH_FOREACH_PTR(MFFI_G(struct_definitions), def) {
 		efree(def->elements);
 		efree(def->element_types);
-
-		ZEND_HASH_FOREACH_PTR(&def->element_hash, elem) {
-			efree(elem);
-		} ZEND_HASH_FOREACH_END();
-
 		zend_hash_destroy(&def->element_hash);
 		efree(def);
 
