@@ -12,7 +12,7 @@ MFFI\Struct::define('TimeStruct', [
     'tm_yday' => Type::TYPE_INT,    /* day of year (0 - 365) */
     'tm_isdst' => Type::TYPE_INT,   /* is summer time in effect? */
     'tm_zone' => Type::TYPE_STRING,  /* abbreviation of timezone name */
-    'tm_gmtoff' => Type::TYPE_INT, /* offset from UTC in seconds */
+//    'tm_gmtoff' => Type::TYPE_INT, /* offset from UTC in seconds */
 ]);
 
 $tm = new TimeStruct();
@@ -25,8 +25,17 @@ var_dump("isset nope", isset($tm->nope));
 var_dump("empty tm_sec", empty($tm->tm_sec));
 var_dump("empty nope", empty($tm->nope));
 
-$tm->tm_sec = 30;
-$tm->tm_zone = "GMT";
+$tm->tm_sec = 0;
+$tm->tm_min = 30;
+$tm->tm_hour = 15;
+$tm->tm_mday = 5;
+$tm->tm_mon = 3;
+$tm->tm_year = 115;
+//$tm->tm_zone = "BST";
 var_dump($tm);
-var_dump($tm->tm_zone);
+//var_dump($tm->tm_zone);
 
+$lib = new MFFI\Library();
+$asctime = $lib->bind('asctime', [ TimeStruct::class ], MFFI\Type::TYPE_STRING);
+var_dump($asctime);
+var_dump($asctime($tm));

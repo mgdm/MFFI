@@ -35,6 +35,7 @@ PHP_METHOD(MFFI_Func, __invoke)
 	long arg_count = 0, i = 0;
 	php_mffi_function_object *intern;
 	php_mffi_value ret_value, *values;
+	php_mffi_struct_object *obj;
 	void **value_pointers;
 
 	PHP_MFFI_ERROR_HANDLING();
@@ -53,13 +54,24 @@ PHP_METHOD(MFFI_Func, __invoke)
 
 	values = (php_mffi_value *) ecalloc(arg_count, sizeof(php_mffi_value));
 	value_pointers = (void **) ecalloc(arg_count, sizeof(void *));
-	
+
 	for (i = 0; i < arg_count; i++) {
-		php_mffi_set_argument(&args[i], &values[i], intern->php_arg_types[i]);
-		value_pointers[i] = &values[i];
+		switch (Z_TYPE(args[i])) {
+			case IS_OBJECT:
+				obj = php_mffi_struct_fetch_object(Z_OBJ(args[i]));
+				values[i].p = obj->data;
+				value_pointers[i] = &values[i];
+				break;
+
+			default:
+				php_mffi_set_argument(&args[i], &values[i], intern->php_arg_types[i]);
+				value_pointers[i] = &values[i];
+				break;
+		}
 	}
 
 	ffi_call(&intern->cif, intern->function, &ret_value, value_pointers);
+	php_printf("Ret val: %p %p\n", &ret_value, ret_value.p);
 
 	php_mffi_set_return_value(return_value, &ret_value, intern->php_return_type);
 
@@ -110,7 +122,7 @@ static void mffi_function_object_free_storage(zend_object *object)
 	if (intern->ffi_arg_types) {
 		efree(intern->ffi_arg_types);
 	}
-	
+
 	if (intern->php_arg_types) {
 		efree(intern->php_arg_types);
 	}

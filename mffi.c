@@ -62,6 +62,8 @@ ffi_type *php_mffi_get_type(long type) {
 			return &ffi_type_pointer;
 
 		case FFI_TYPE_STRUCT:
+			return &ffi_type_pointer;
+
 		case FFI_TYPE_POINTER:
 		default:
 			return NULL;
@@ -101,6 +103,7 @@ void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long 
 			break;
 
 		case PHP_MFFI_TYPE_STRING:
+			php_printf("%p %p\n", result->s, result->p); 
 			if (result->s != NULL) {
 				ZVAL_STRING(return_value, result->s);
 			} else {
@@ -118,6 +121,7 @@ void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long 
 void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
 	zval tmp = *arg;
 	zval_copy_ctor(&tmp);
+	php_mffi_struct_object *obj = NULL;
 
 	switch(type) {
 		case FFI_TYPE_INT:
@@ -174,6 +178,11 @@ void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
 			break;
 
 		case FFI_TYPE_STRUCT:
+			obj = php_mffi_struct_fetch_object(Z_OBJ_P(arg));
+			dest->p = obj->data;
+			php_printf("Pointer: %p\n", obj->data);
+			break;
+
 		case FFI_TYPE_POINTER:
 		default:
 			zend_throw_exception(mffi_ce_exception, "Unimplemented type", 1);
@@ -253,6 +262,7 @@ static PHP_GINIT_FUNCTION(mffi)
 /* {{{ PHP_GSHUTDOWN_FUNCTION */
 static PHP_GSHUTDOWN_FUNCTION(mffi)
 {
+	zend_hash_destroy(MFFI_G(struct_definitions));
 }
 /* }}} */
 
@@ -261,7 +271,6 @@ static PHP_GSHUTDOWN_FUNCTION(mffi)
 PHP_RSHUTDOWN_FUNCTION(mffi)
 {
 	php_mffi_struct_definition *def;
-	php_mffi_struct_element *elem;
 
 	ZEND_HASH_FOREACH_PTR(MFFI_G(struct_definitions), def) {
 		efree(def->elements);
@@ -271,7 +280,6 @@ PHP_RSHUTDOWN_FUNCTION(mffi)
 
 	} ZEND_HASH_FOREACH_END();
 
-	zend_hash_destroy(MFFI_G(struct_definitions));
 	return SUCCESS;
 }
 /* }}} */

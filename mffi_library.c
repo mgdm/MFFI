@@ -54,6 +54,7 @@ PHP_METHOD(MFFI_Library, bind)
 	long return_type = 0;
 	php_mffi_library_object *intern = NULL;
 	php_mffi_function_object *function = NULL;
+	php_mffi_struct_definition *def = NULL;
 	zend_long i = 0;
 	ffi_status status;
 	void *handle = NULL;
@@ -91,13 +92,24 @@ PHP_METHOD(MFFI_Library, bind)
 	function->php_arg_types = ecalloc(function->arg_count, sizeof(long));
 
 	ZEND_HASH_FOREACH_VAL(args_hash, current_arg) {
-		if (Z_TYPE_P(current_arg) != IS_LONG && Z_TYPE_P(current_arg) != IS_OBJECT) {
-			zend_throw_exception(mffi_ce_exception, "Unsupported type", 1);
-			return;
+		switch (Z_TYPE_P(current_arg)) {
+
+			case IS_LONG:
+				function->ffi_arg_types[i] = php_mffi_get_type(Z_LVAL_P(current_arg));
+				function->php_arg_types[i] = Z_LVAL_P(current_arg);
+				break;
+
+			case IS_STRING:
+				def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(current_arg));
+				function->ffi_arg_types[i] = &def->type;
+				function->php_arg_types[i] = FFI_TYPE_STRUCT;
+				break;
+
+			default:
+				zend_throw_exception(mffi_ce_exception, "Unsupported type", 1);
+				return;
 		}
 
-		function->ffi_arg_types[i] = php_mffi_get_type(Z_LVAL_P(current_arg));
-		function->php_arg_types[i] = Z_LVAL_P(current_arg);
 		i++;
 
 	} ZEND_HASH_FOREACH_END();
