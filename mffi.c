@@ -103,7 +103,6 @@ void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long 
 			break;
 
 		case PHP_MFFI_TYPE_STRING:
-			php_printf("%p %p\n", result->s, result->p); 
 			if (result->s != NULL) {
 				ZVAL_STRING(return_value, result->s);
 			} else {
@@ -180,7 +179,6 @@ void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
 		case FFI_TYPE_STRUCT:
 			obj = php_mffi_struct_fetch_object(Z_OBJ_P(arg));
 			dest->p = obj->data;
-			php_printf("Pointer: %p\n", obj->data);
 			break;
 
 		case FFI_TYPE_POINTER:

@@ -71,7 +71,6 @@ PHP_METHOD(MFFI_Func, __invoke)
 	}
 
 	ffi_call(&intern->cif, intern->function, &ret_value, arguments);
-	php_printf("Ret val: %p %p\n", &ret_value, ret_value.p);
 
 	php_mffi_set_return_value(return_value, &ret_value, intern->php_return_type);
 

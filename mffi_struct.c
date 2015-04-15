@@ -89,7 +89,6 @@ PHP_METHOD(MFFI_Struct, define)
 		template->elements[i].type = type;
 		template->elements[i].offset = struct_size;
 		struct_size += type->size;
-		php_printf("Member: %s, Offset: %d, Struct size: %d\n", string_key->val, template->elements[i].offset, struct_size);
 		template->element_types[i] = type;
 
 		zend_hash_add_ptr(&template->element_hash, string_key, &template->elements[i]);
@@ -205,7 +204,6 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
 
 	/* TODO - there has to be a safer way to add bytes to a pointer? */
 	data = (size_t) intern->data + element->offset;
-	php_printf("Key: %s, offset: %d, data: %p\n", member_key->val, element->offset, data);
 	val = (php_mffi_value *) data;
 
 	php_mffi_set_return_value(rv, val, element->php_type);
@@ -227,7 +225,6 @@ static HashTable *php_mffi_struct_get_properties(zval *object) {
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(&intern->template->element_hash, key, element) {
 		data = (size_t) intern->data + element->offset;
-		php_printf("Iter key: %s, offset: %d, pointer: %p\n", key->val, element->offset, data);
 		php_mffi_set_return_value(&ret, (php_mffi_value *) data, element->php_type);
 		zend_hash_update(props, key, &ret);
 	} ZEND_HASH_FOREACH_END();
