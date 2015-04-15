@@ -88,7 +88,7 @@ PHP_METHOD(MFFI_Library, bind)
 
 	args_hash = Z_ARRVAL_P(args);
 	function->arg_count = zend_hash_num_elements(args_hash);
-	function->ffi_arg_types = ecalloc(function->arg_count, sizeof(ffi_type));
+	function->ffi_arg_types = ecalloc(function->arg_count, sizeof(ffi_type *));
 	function->php_arg_types = ecalloc(function->arg_count, sizeof(long));
 
 	ZEND_HASH_FOREACH_VAL(args_hash, current_arg) {
@@ -113,6 +113,7 @@ PHP_METHOD(MFFI_Library, bind)
 		i++;
 
 	} ZEND_HASH_FOREACH_END();
+	function->ffi_arg_types[i] = NULL;
 
 	function->return_type = php_mffi_get_type(return_type);
 	function->php_return_type = return_type;

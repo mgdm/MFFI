@@ -52,15 +52,14 @@ PHP_METHOD(MFFI_Func, __invoke)
 		return;
 	}
 
-	php_printf("Arg count: %d\n", arg_count);
 	values = (php_mffi_value *) ecalloc(arg_count, sizeof(php_mffi_value));
-	arguments = (void **) ecalloc(arg_count, sizeof(void *));
+	arguments = (void **) ecalloc(1 + arg_count, sizeof(void *));
 
 	for (i = 0; i < arg_count; i++) {
 		switch (Z_TYPE(args[i])) {
 			case IS_OBJECT:
 				obj = php_mffi_struct_fetch_object(Z_OBJ(args[i]));
-				arguments[i] = obj->data;
+				arguments[i] = &obj->data;
 				break;
 
 			default:
@@ -76,7 +75,7 @@ PHP_METHOD(MFFI_Func, __invoke)
 
 	/* Free the string arguments */
 	for (i = 0; i < arg_count; i++) {
-	//	php_mffi_free_argument(&values[i], intern->php_arg_types[i]);
+		php_mffi_free_argument(&values[i], intern->php_arg_types[i]);
 	}
 
 	efree(values);
