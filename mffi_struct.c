@@ -147,25 +147,12 @@ static zend_object *mffi_struct_object_new(zend_class_entry *ce)
 static void mffi_struct_object_free_storage(zend_object *object)
 {
 	php_mffi_struct_object *intern = php_mffi_struct_fetch_object(object);
-	php_mffi_struct_element *element;
-	size_t data;
-	php_mffi_value *val;
 
 	if (!intern) {
 		return;
 	}
 
 	if (intern->data != NULL) {
-		data = (size_t) intern->data;
-		ZEND_HASH_FOREACH_PTR(&intern->template->element_hash, element) {
-			if (element->php_type == PHP_MFFI_TYPE_STRING) {
-				val = (php_mffi_value *) data;
-				efree(val->p);
-			}
-
-			data = (size_t) intern->data + element->offset;
-		} ZEND_HASH_FOREACH_END();
-
 		efree(intern->data);
 	}
 
