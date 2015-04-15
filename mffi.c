@@ -242,6 +242,9 @@ PHP_MSHUTDOWN_FUNCTION(mffi)
 /* {{{ PHP_RINIT_FUNCTION */
 PHP_RINIT_FUNCTION(mffi)
 {
+	ALLOC_HASHTABLE(MFFI_G(struct_definitions));
+	zend_hash_init(MFFI_G(struct_definitions), 8, NULL, NULL, 0);
+
 	return SUCCESS;
 }
 /* }}} */
@@ -252,15 +255,12 @@ static PHP_GINIT_FUNCTION(mffi)
 #if defined(COMPILE_DL_MFFI) && defined(ZTS)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
-	ALLOC_HASHTABLE(MFFI_G(struct_definitions));
-	zend_hash_init(MFFI_G(struct_definitions), 8, NULL, NULL, 0);
 }
 /* }}} */
 
 /* {{{ PHP_GSHUTDOWN_FUNCTION */
 static PHP_GSHUTDOWN_FUNCTION(mffi)
 {
-	zend_hash_destroy(MFFI_G(struct_definitions));
 }
 /* }}} */
 
@@ -277,6 +277,9 @@ PHP_RSHUTDOWN_FUNCTION(mffi)
 		efree(def);
 
 	} ZEND_HASH_FOREACH_END();
+
+	zend_hash_destroy(MFFI_G(struct_definitions));
+	efree(MFFI_G(struct_definitions));
 
 	return SUCCESS;
 }
