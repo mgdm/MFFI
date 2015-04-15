@@ -179,8 +179,7 @@ static zval *php_mffi_struct_read_property(zval *object, zval *member, int type,
 	php_mffi_struct_element *element = NULL;
 	php_mffi_value *val = NULL;
 	zval tmp;
-	long offset = 0, found = 0;
-	zend_string *current_key, *member_key;
+	zend_string *member_key;
 	size_t data;
 
 	if (Z_TYPE_P(member) != IS_STRING) {
@@ -282,7 +281,7 @@ static void php_mffi_struct_write_property(zval *object, zval *member, zval *val
 	zval tmp;
 	size_t data = 0;
 	php_mffi_struct_element *element;
-	zend_string *current_key, *member_key;
+	zend_string *member_key;
 
 	intern = php_mffi_struct_fetch_object(Z_OBJ_P(object));
 
