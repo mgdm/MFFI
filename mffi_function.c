@@ -33,9 +33,9 @@ PHP_METHOD(MFFI_Func, __invoke)
 {
 	zval *args = NULL;
 	long arg_count = 0, i = 0;
-	php_mffi_function_object *intern;
-	php_mffi_value ret_value, *values;
-	php_mffi_struct_object *obj;
+	php_mffi_function_object *intern = NULL;
+	php_mffi_value ret_value, *values = NULL;
+	php_mffi_struct_object *obj = NULL;
 	void **arguments;
 
 	PHP_MFFI_ERROR_HANDLING();
