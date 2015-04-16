@@ -88,7 +88,7 @@ PHP_METHOD(MFFI_Library, bind)
 
 	args_hash = Z_ARRVAL_P(args);
 	function->arg_count = zend_hash_num_elements(args_hash);
-	function->ffi_arg_types = ecalloc(function->arg_count, sizeof(ffi_type *));
+	function->ffi_arg_types = ecalloc(function->arg_count + 1, sizeof(ffi_type *));
 	function->php_arg_types = ecalloc(function->arg_count, sizeof(long));
 
 	ZEND_HASH_FOREACH_VAL(args_hash, current_arg) {
@@ -101,8 +101,9 @@ PHP_METHOD(MFFI_Library, bind)
 
 			case IS_STRING:
 				def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(current_arg));
-				function->ffi_arg_types[i] = &def->type;
-				function->php_arg_types[i] = FFI_TYPE_STRUCT;
+//				function->ffi_arg_types[i] = &def->type;
+				function->ffi_arg_types[i] = &ffi_type_pointer;
+				function->php_arg_types[i] = FFI_TYPE_POINTER;
 				break;
 
 			default:
