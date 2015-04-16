@@ -5,7 +5,8 @@
 - [x] Calling a function passing a pointer to a user-defined struct
 - [ ] Calling a function returning a pointer to a user-defined struct
 - [ ] Calling a function that accepts a pointer and modifies the target in place
+- [ ] Figure out a syntax for pointers
+- [ ] Figure out how to handle transferring ownership of memory
 - [ ] Calling a function accepting zero or more structs by value
 - [ ] Calling functions that return a pointer to an opaque struct
 - [ ] Calling functions accepting pointers to opaque structs
-
