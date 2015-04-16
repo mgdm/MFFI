@@ -1,0 +1,10 @@
+# TODO
+
+- [x] Calling functions that return scalars by value
+- [x] Calling functions that accept zero or more scalars by value
+- [x] Calling a function passing a pointer to a user-defined struct
+- [ ] Calling a function returning a pointer to a user-defined struct
+- [ ] Calling a function accepting zero or more structs by value
+- [ ] Calling functions that return a pointer to an opaque struct
+- [ ] Calling functions accepting pointers to opaque structs
+
