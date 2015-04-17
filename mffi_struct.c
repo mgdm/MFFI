@@ -54,7 +54,7 @@ PHP_METHOD(MFFI_Struct, define)
 	PHP_MFFI_RESTORE_ERRORS();
 
 	if (zend_hash_exists(EG(class_table), class_name)) {
-		zend_throw_exception(mffi_ce_exception, "Cannot redeclare class", 1);
+		zend_throw_exception_ex(mffi_ce_exception, 0, "Cannot redeclare class %s", class_name->val);
 		return;
 	}
 
@@ -129,7 +129,7 @@ static zend_object *mffi_struct_object_new(zend_class_entry *ce)
 	template = zend_hash_find_ptr(MFFI_G(struct_definitions), ce->name);
 
 	if (!template) {
-		zend_throw_exception(mffi_ce_exception, "Internal struct definition not found!", 1);
+		zend_throw_exception_ex(mffi_ce_exception, 0, "Internal struct definition for %s not found!", ce->name);
 		return NULL;
 	}
 

@@ -177,11 +177,11 @@ void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
 			break;
 
 		case FFI_TYPE_STRUCT:
+		case FFI_TYPE_POINTER:
 			obj = php_mffi_struct_fetch_object(Z_OBJ_P(arg));
 			dest->p = obj->data;
 			break;
 
-		case FFI_TYPE_POINTER:
 		default:
 			zend_throw_exception(mffi_ce_exception, "Unimplemented type", 1);
 			break;

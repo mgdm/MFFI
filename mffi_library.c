@@ -37,7 +37,12 @@ PHP_METHOD(MFFI_Library, __construct)
 	}
 
 	if (!handle) {
-		zend_throw_exception(mffi_ce_exception, "Could not open library", 1);
+		if (lib_name != NULL) {
+			zend_throw_exception_ex(mffi_ce_exception, 0, "Could not open library %s", lib_name);
+		} else {
+			zend_throw_exception(mffi_ce_exception, "Could not open library", 0);
+		}
+
 		return;
 	}
 
@@ -101,6 +106,14 @@ PHP_METHOD(MFFI_Library, bind)
 
 			case IS_STRING:
 				def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(current_arg));
+
+				if (def == NULL) {
+					zend_throw_exception_ex(mffi_ce_exception, 0, "Struct definition for %s not found", Z_STRVAL_P(current_arg));
+					efree(function->php_arg_types);
+					efree(function->ffi_arg_types);
+					return;
+				}
+
 //				function->ffi_arg_types[i] = &def->type;
 				function->ffi_arg_types[i] = &ffi_type_pointer;
 				function->php_arg_types[i] = FFI_TYPE_POINTER;
@@ -108,6 +121,8 @@ PHP_METHOD(MFFI_Library, bind)
 
 			default:
 				zend_throw_exception(mffi_ce_exception, "Unsupported type", 1);
+				efree(function->php_arg_types);
+				efree(function->ffi_arg_types);
 				return;
 		}
 
@@ -124,6 +139,8 @@ PHP_METHOD(MFFI_Library, bind)
 
 	if (status != FFI_OK) {
 		zend_throw_exception(mffi_ce_exception, "Something went wrong preparing the function", 1);
+		efree(function->php_arg_types);
+		efree(function->ffi_arg_types);
 		return;
 	}
 
