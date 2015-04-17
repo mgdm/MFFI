@@ -14,16 +14,6 @@ extern zend_class_entry *mffi_ce_struct;
 #define PHP_MFFI_RESTORE_ERRORS() \
 	zend_restore_error_handling(&error_handling)
 
-#define PHP_MFFI_LIBRARY_FROM_OBJECT(object, zv) \
-	object = php_mffi_library_fetch_object(Z_OBJ_P(zv))
-
-#define PHP_MFFI_FUNCTION_FROM_OBJECT(object, zv) \
-	object = php_mffi_function_fetch_object(Z_OBJ_P(zv))
-
-#define PHP_MFFI_STRUCT_FROM_OBJECT(object, zv) \
-	object = php_mffi_struct_fetch_object(Z_OBJ_P(zv))
-
-
 php_mffi_library_object *php_mffi_library_fetch_object(zend_object *obj);
 php_mffi_function_object *php_mffi_function_fetch_object(zend_object *obj);
 php_mffi_struct_object *php_mffi_struct_fetch_object(zend_object *obj);

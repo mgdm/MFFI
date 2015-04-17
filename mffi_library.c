@@ -28,7 +28,7 @@ PHP_METHOD(MFFI_Library, __construct)
 	}
 	PHP_MFFI_RESTORE_ERRORS();
 
-	PHP_MFFI_LIBRARY_FROM_OBJECT(intern, getThis());
+	intern = php_mffi_library_fetch_object(Z_OBJ_P(getThis()));
 
 	if (lib_name != NULL) {
 		handle = dlopen(lib_name->val, RTLD_LAZY);
@@ -71,7 +71,7 @@ PHP_METHOD(MFFI_Library, bind)
 	}
 	PHP_MFFI_RESTORE_ERRORS();
 
-	PHP_MFFI_LIBRARY_FROM_OBJECT(intern, getThis());
+	intern = php_mffi_library_fetch_object(Z_OBJ_P(getThis()));
 
 	if (!intern->handle) {
 		zend_throw_exception(mffi_ce_exception, "Library object is uninitialized", 1);
@@ -79,7 +79,7 @@ PHP_METHOD(MFFI_Library, bind)
 	}
 
 	object_init_ex(return_value, mffi_ce_function);
-	PHP_MFFI_FUNCTION_FROM_OBJECT(function, return_value);
+	function = php_mffi_function_fetch_object(Z_OBJ_P(return_value));
 	handle = dlsym(intern->handle, func_name->val);
 	err = dlerror();
 

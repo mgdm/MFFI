@@ -45,7 +45,7 @@ PHP_METHOD(MFFI_Func, __invoke)
 	}
 	PHP_MFFI_RESTORE_ERRORS();
 
-	PHP_MFFI_FUNCTION_FROM_OBJECT(intern, getThis());
+	intern = php_mffi_function_fetch_object(Z_OBJ_P(getThis()));
 
 	if (arg_count != intern->arg_count) {
 		zend_throw_exception(mffi_ce_exception, "Incorrect argument count", 1);
