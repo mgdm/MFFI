@@ -38,7 +38,7 @@ PHP_METHOD(MFFI_Library, __construct)
 
 	if (!handle) {
 		if (lib_name != NULL) {
-			zend_throw_exception_ex(mffi_ce_exception, 0, "Could not open library %s", lib_name);
+			zend_throw_exception_ex(mffi_ce_exception, 0, "Could not open library %s", lib_name->val);
 		} else {
 			zend_throw_exception(mffi_ce_exception, "Could not open library", 0);
 		}
@@ -54,9 +54,8 @@ PHP_METHOD(MFFI_Library, __construct)
 PHP_METHOD(MFFI_Library, bind)
 {
 	zend_string *func_name = NULL;
-	zval *args = NULL, *current_arg = NULL;
+	zval *args = NULL, *current_arg = NULL, *return_type = NULL;
 	HashTable *args_hash = NULL;
-	long return_type = 0;
 	php_mffi_library_object *intern = NULL;
 	php_mffi_function_object *function = NULL;
 	php_mffi_struct_definition *def = NULL;
@@ -66,7 +65,7 @@ PHP_METHOD(MFFI_Library, bind)
 	char *err = NULL;
 
 	PHP_MFFI_ERROR_HANDLING();
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|al", &func_name, &args, &return_type) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|az", &func_name, &args, &return_type) == FAILURE) {
 		PHP_MFFI_RESTORE_ERRORS();
 		return;
 	}
@@ -131,8 +130,27 @@ PHP_METHOD(MFFI_Library, bind)
 	} ZEND_HASH_FOREACH_END();
 	function->ffi_arg_types[i] = NULL;
 
-	function->return_type = php_mffi_get_type(return_type);
-	function->php_return_type = return_type;
+	def = NULL;
+	switch (Z_TYPE_P(return_type)) {
+		case IS_LONG:
+			function->return_type = php_mffi_get_type(Z_LVAL_P(return_type));
+			function->php_return_type = Z_LVAL_P(return_type);
+			break;
+
+		case IS_STRING:
+			def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(return_type));
+
+			if (def == NULL) {
+				zend_throw_exception_ex(mffi_ce_exception, 0, "Struct definition %s not found", Z_STRVAL_P(return_type));
+				efree(function->php_arg_types);
+				efree(function->ffi_arg_types);
+				return;
+			}
+
+			function->return_type = &ffi_type_pointer;
+			function->php_return_type = FFI_TYPE_POINTER;
+			break;
+	}
 
 	status = ffi_prep_cif(&function->cif, FFI_DEFAULT_ABI,
 			function->arg_count, function->return_type, function->ffi_arg_types);
