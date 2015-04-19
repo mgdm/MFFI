@@ -14,6 +14,7 @@ zend_class_entry *mffi_ce_struct;
 
 static zend_object_handlers mffi_struct_object_handlers;
 
+static php_mffi_struct_definition *php_mffi_struct_get_definition(zend_object *obj);
 static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *elements);
 
 /* {{{ PHP_METHOD(MFFI_Struct, __construct */
@@ -33,43 +34,37 @@ PHP_METHOD(MFFI_Struct, __construct)
 	intern = php_mffi_struct_fetch_object(obj);
 
 	if (intern->template == NULL) {
-		/* Class hasn't been made using define(), look for a Class::definition() class method */
-		zval elements;
-		zend_fcall_info fci;
-		int result;
-
-		fci.size = sizeof(fci);
-		ZVAL_STRINGL(&fci.function_name, "definition", sizeof("definition") - 1);
-		fci.function_table = &obj->ce->function_table;
-		fci.symbol_table = NULL;
-		fci.object = obj;
-		fci.retval = &elements;
-		fci.param_count = 0;
-		fci.params = NULL;
-		fci.no_separation = 1;
-
-		result = zend_call_function(&fci, NULL);
-
-		zval_ptr_dtor(&fci.function_name);
-
-		if (EG(exception)) {
-			return;
-		}
-
-		if (result != SUCCESS) {
-			zend_throw_exception_ex(mffi_ce_exception, 0, "Class %s has not been defined correctly: could not call %s::definition()", obj->ce->name->val, obj->ce->name->val);
-			return;
-		}
-
-		intern->template = php_mffi_make_struct_definition(&elements);
-		zend_hash_add_ptr(MFFI_G(struct_definitions), obj->ce->name, intern->template);
-		zval_ptr_dtor(&elements);
+		intern->template = php_mffi_struct_get_definition(obj);
 	}
 
 	intern->data = ecalloc(1, intern->template->struct_size);
 }
 
 /* }}} */
+
+/* {{{ PHP_METHOD(MFFI_Struct, pointer) */
+PHP_METHOD(MFFI_Struct, pointer)
+{
+	php_mffi_struct_object *intern = NULL;
+
+	PHP_MFFI_ERROR_HANDLING();
+	if (zend_parse_parameters_none() == FAILURE) {
+		PHP_MFFI_RESTORE_ERRORS();
+		return;
+	}
+	PHP_MFFI_RESTORE_ERRORS();
+
+	object_init_ex(return_value, EX(called_scope));
+	intern = php_mffi_struct_fetch_object(Z_OBJ_P(return_value));
+
+	if (intern->template == NULL) {
+		intern->template = php_mffi_struct_get_definition(Z_OBJ_P(return_value));
+	}
+
+	intern->data = NULL;
+}
+/* }}} */
+
 
 /* {{{ PHP_METHOD(MFFI_Struct, define) */
 PHP_METHOD(MFFI_Struct, define)
@@ -102,10 +97,48 @@ PHP_METHOD(MFFI_Struct, define)
 /* {{{ */
 const zend_function_entry mffi_struct_methods[] = {
 	PHP_ME(MFFI_Struct, define, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	PHP_ME(MFFI_Struct, pointer, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(MFFI_Struct, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_FE_END
 };
 /* }}} */
+
+static php_mffi_struct_definition *php_mffi_struct_get_definition(zend_object *obj) {
+	/* Class hasn't been made using define(), look for a Class::definition() class method */
+	zval elements;
+	zend_fcall_info fci;
+	int result;
+	php_mffi_struct_definition *template;
+
+	fci.size = sizeof(fci);
+	ZVAL_STRINGL(&fci.function_name, "definition", sizeof("definition") - 1);
+	fci.function_table = &obj->ce->function_table;
+	fci.symbol_table = NULL;
+	fci.object = obj;
+	fci.retval = &elements;
+	fci.param_count = 0;
+	fci.params = NULL;
+	fci.no_separation = 1;
+
+	result = zend_call_function(&fci, NULL);
+
+	zval_ptr_dtor(&fci.function_name);
+
+	if (EG(exception)) {
+		return NULL;
+	}
+
+	if (result != SUCCESS) {
+		zend_throw_exception_ex(mffi_ce_exception, 0, "Class %s has not been defined correctly: could not call %s::definition()", obj->ce->name->val, obj->ce->name->val);
+		return NULL;
+	}
+
+	template = php_mffi_make_struct_definition(&elements);
+	zend_hash_add_ptr(MFFI_G(struct_definitions), obj->ce->name, template);
+	zval_ptr_dtor(&elements);
+
+	return template;
+}
 
 /* {{{ */
 static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *elements) {

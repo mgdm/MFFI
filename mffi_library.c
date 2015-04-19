@@ -131,25 +131,36 @@ PHP_METHOD(MFFI_Library, bind)
 	function->ffi_arg_types[i] = NULL;
 
 	def = NULL;
-	switch (Z_TYPE_P(return_type)) {
-		case IS_LONG:
-			function->return_type = php_mffi_get_type(Z_LVAL_P(return_type));
-			function->php_return_type = Z_LVAL_P(return_type);
-			break;
 
-		case IS_STRING:
-			def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(return_type));
+	if (return_type == NULL) {
+		function->return_type = &ffi_type_void;
+		function->php_return_type = FFI_TYPE_VOID;
+	} else {
+		switch (Z_TYPE_P(return_type)) {
+			case IS_NULL:
+				function->return_type = &ffi_type_void;
+				function->php_return_type = FFI_TYPE_VOID;
+				break;
 
-			if (def == NULL) {
-				zend_throw_exception_ex(mffi_ce_exception, 0, "Struct definition %s not found", Z_STRVAL_P(return_type));
-				efree(function->php_arg_types);
-				efree(function->ffi_arg_types);
-				return;
-			}
+			case IS_LONG:
+				function->return_type = php_mffi_get_type(Z_LVAL_P(return_type));
+				function->php_return_type = Z_LVAL_P(return_type);
+				break;
 
-			function->return_type = &ffi_type_pointer;
-			function->php_return_type = FFI_TYPE_POINTER;
-			break;
+			case IS_STRING:
+				def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(return_type));
+
+				if (def == NULL) {
+					zend_throw_exception_ex(mffi_ce_exception, 0, "Struct definition %s not found", Z_STRVAL_P(return_type));
+					efree(function->php_arg_types);
+					efree(function->ffi_arg_types);
+					return;
+				}
+
+				function->return_type = &ffi_type_pointer;
+				function->php_return_type = FFI_TYPE_POINTER;
+				break;
+		}
 	}
 
 	status = ffi_prep_cif(&function->cif, FFI_DEFAULT_ABI,

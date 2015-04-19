@@ -65,6 +65,8 @@ ffi_type *php_mffi_get_type(long type) {
 			return &ffi_type_pointer;
 
 		case FFI_TYPE_POINTER:
+			return &ffi_type_pointer;
+
 		default:
 			return NULL;
 	}
