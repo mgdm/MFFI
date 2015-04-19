@@ -17,6 +17,7 @@ static zend_object_handlers mffi_struct_object_handlers;
 /* {{{ PHP_METHOD(MFFI_Struct, __construct */
 PHP_METHOD(MFFI_Struct, __construct)
 {
+	zend_object *obj = NULL;
 	php_mffi_struct_object *intern = NULL;
 
 	PHP_MFFI_ERROR_HANDLING();
@@ -26,7 +27,13 @@ PHP_METHOD(MFFI_Struct, __construct)
 	}
 	PHP_MFFI_RESTORE_ERRORS();
 
-	intern = php_mffi_struct_fetch_object(Z_OBJ_P(getThis()));
+	obj = Z_OBJ_P(getThis());
+	intern = php_mffi_struct_fetch_object(obj);
+
+	if (intern->template == NULL) {
+		zend_throw_exception_ex(mffi_ce_exception, 0, "Class %s has not been defined correctly", obj->ce->name->val);
+		return;
+	}
 
 	intern->data = ecalloc(1, intern->template->struct_size);
 }
@@ -127,11 +134,6 @@ static zend_object *mffi_struct_object_new(zend_class_entry *ce)
 	php_mffi_struct_object *object;
 	php_mffi_struct_definition *template;
 	template = zend_hash_find_ptr(MFFI_G(struct_definitions), ce->name);
-
-	if (!template) {
-		zend_throw_exception_ex(mffi_ce_exception, 0, "Internal struct definition for %s not found!", ce->name);
-		return NULL;
-	}
 
 	object = ecalloc(1, sizeof(php_mffi_struct_object) + zend_object_properties_size(ce));
 	object->template = template;
