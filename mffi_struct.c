@@ -14,6 +14,8 @@ zend_class_entry *mffi_ce_struct;
 
 static zend_object_handlers mffi_struct_object_handlers;
 
+static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *elements);
+
 /* {{{ PHP_METHOD(MFFI_Struct, __construct */
 PHP_METHOD(MFFI_Struct, __construct)
 {
@@ -31,8 +33,37 @@ PHP_METHOD(MFFI_Struct, __construct)
 	intern = php_mffi_struct_fetch_object(obj);
 
 	if (intern->template == NULL) {
-		zend_throw_exception_ex(mffi_ce_exception, 0, "Class %s has not been defined correctly", obj->ce->name->val);
-		return;
+		/* Class hasn't been made using define(), look for a Class::definition() class method */
+		zval elements;
+		zend_fcall_info fci;
+		int result;
+
+		fci.size = sizeof(fci);
+		ZVAL_STRINGL(&fci.function_name, "definition", sizeof("definition") - 1);
+		fci.function_table = &obj->ce->function_table;
+		fci.symbol_table = NULL;
+		fci.object = obj;
+		fci.retval = &elements;
+		fci.param_count = 0;
+		fci.params = NULL;
+		fci.no_separation = 1;
+
+		result = zend_call_function(&fci, NULL);
+
+		zval_ptr_dtor(&fci.function_name);
+
+		if (EG(exception)) {
+			return;
+		}
+
+		if (result != SUCCESS) {
+			zend_throw_exception_ex(mffi_ce_exception, 0, "Class %s has not been defined correctly: could not call %s::definition()", obj->ce->name->val, obj->ce->name->val);
+			return;
+		}
+
+		intern->template = php_mffi_make_struct_definition(&elements);
+		zend_hash_add_ptr(MFFI_G(struct_definitions), obj->ce->name, intern->template);
+		zval_ptr_dtor(&elements);
 	}
 
 	intern->data = ecalloc(1, intern->template->struct_size);
@@ -43,13 +74,8 @@ PHP_METHOD(MFFI_Struct, __construct)
 /* {{{ PHP_METHOD(MFFI_Struct, define) */
 PHP_METHOD(MFFI_Struct, define)
 {
-	HashTable *element_hash = NULL;
-	zend_string *class_name = NULL, *string_key;
-	zval *elements = NULL, *current_elem = NULL;
-	long i = 0;
-	size_t struct_size = 0;
-	zend_ulong num_key = -1;
-	ffi_type *type;
+	zend_string *class_name = NULL;
+	zval *elements = NULL;
 	zend_class_entry new_class;
 	php_mffi_struct_definition *template;
 
@@ -65,6 +91,33 @@ PHP_METHOD(MFFI_Struct, define)
 		return;
 	}
 
+	template = php_mffi_make_struct_definition(elements);
+	zend_hash_add_ptr(MFFI_G(struct_definitions), class_name, template);
+
+	INIT_CLASS_ENTRY_EX(new_class, class_name->val, class_name->len, NULL);
+	zend_register_internal_class_ex(&new_class, mffi_ce_struct);
+}
+/* }}} */
+
+/* {{{ */
+const zend_function_entry mffi_struct_methods[] = {
+	PHP_ME(MFFI_Struct, define, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	PHP_ME(MFFI_Struct, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_FE_END
+};
+/* }}} */
+
+/* {{{ */
+static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *elements) {
+	HashTable *element_hash = NULL;
+	zend_string *string_key = NULL;
+	zval *current_elem = NULL;
+	long i = 0;
+	size_t struct_size = 0;
+	zend_ulong num_key = -1;
+	ffi_type *type;
+	php_mffi_struct_definition *template;
+
 	element_hash = Z_ARRVAL_P(elements);
 	template = ecalloc(1, sizeof(php_mffi_struct_definition));
 	template->element_count = zend_hash_num_elements(element_hash);
@@ -76,19 +129,19 @@ PHP_METHOD(MFFI_Struct, define)
 	ZEND_HASH_FOREACH_KEY_VAL(element_hash, num_key, string_key, current_elem) {
 		if (string_key == NULL) {
 			zend_throw_exception(mffi_ce_exception, "Structure elements need names", 1);
-			return;
+			return NULL;
 		}
 
 		if (Z_TYPE_P(current_elem) != IS_LONG && Z_TYPE_P(current_elem) != IS_STRING) {
-			zend_throw_exception(mffi_ce_exception, "Unsupported type", 1);
-			return;
+			zend_throw_exception_ex(mffi_ce_exception, 0, "Unsupported type for element %s", string_key->val);
+			return NULL;
 		}
 
 		type = php_mffi_get_type(Z_LVAL_P(current_elem));
 
 		if (!type) {
 			zend_throw_exception(mffi_ce_exception, "Unsupported type", 1);
-			return;
+			return NULL;
 		}
 
 		template->elements[i].index = i;
@@ -106,19 +159,9 @@ PHP_METHOD(MFFI_Struct, define)
 	template->element_types[template->element_count] = NULL;
 	template->type.elements = template->element_types;
 	template->struct_size = struct_size;
-	zend_hash_add_ptr(MFFI_G(struct_definitions), class_name, template);
 
-	INIT_CLASS_ENTRY_EX(new_class, class_name->val, class_name->len, NULL);
-	zend_register_internal_class_ex(&new_class, mffi_ce_struct);
+	return template;
 }
-/* }}} */
-
-/* {{{ */
-const zend_function_entry mffi_struct_methods[] = {
-	PHP_ME(MFFI_Struct, define, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-	PHP_ME(MFFI_Struct, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
-	PHP_FE_END
-};
 /* }}} */
 
 /* {{{ */
