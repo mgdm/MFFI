@@ -104,43 +104,7 @@ PHP_METHOD(MFFI_Library, bind)
 				break;
 
 			case IS_ARRAY:
-				ht = Z_ARRVAL_P(current_arg);
-				zval *tmp;
-
-				if (zend_hash_num_elements(ht) != 2) {
-					zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid argument definition for %s", func_name->val);
-					goto cleanup;
-				}
-
-				tmp = zend_hash_index_find(ht, 0);
-
-				if (Z_TYPE_P(tmp) != IS_STRING) {
-					zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid argument definition for %s", func_name->val);
-					goto cleanup;
-				}
-
-				def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(tmp));
-
-				if (def == NULL) {
-					zend_throw_exception_ex(mffi_ce_exception, 0, "Struct definition for %s not found", Z_STRVAL_P(tmp));
-					goto cleanup;
-				}
-
-				tmp = zend_hash_index_find(ht, 1);
-
-				if (Z_TYPE_P(tmp) != IS_LONG) {
-					zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid argument definition for %s", func_name->val);
-					goto cleanup;
-				}
-
-				if (Z_LVAL_P(tmp) == PHP_MFFI_BY_VALUE) {
-					function->ffi_arg_types[i] = &def->type;
-					function->php_arg_types[i] = FFI_TYPE_STRUCT;
-				} else {
-					function->ffi_arg_types[i] = &ffi_type_pointer;
-					function->php_arg_types[i] = FFI_TYPE_POINTER;
-				}
-
+				php_mffi_types_from_array(current_arg, func_name, &function->php_arg_types[i], &function->ffi_arg_types[i]);
 				break;
 
 			case IS_STRING:

@@ -19,6 +19,7 @@ php_mffi_function_object *php_mffi_function_fetch_object(zend_object *obj);
 php_mffi_struct_object *php_mffi_struct_fetch_object(zend_object *obj);
 void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long type);
 void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type);
+void php_mffi_types_from_array(zval *arg, zend_string *arg_name, long *php_type, ffi_type **type);
 
 ffi_type *php_mffi_get_type(long type);
 

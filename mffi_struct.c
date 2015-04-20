@@ -65,8 +65,8 @@ PHP_METHOD(MFFI_Struct, pointer)
 }
 /* }}} */
 
-/* {{{ PHP_METHOD(MFFI_Struct, byRef) */
-PHP_METHOD(MFFI_Struct, byRef)
+/* {{{ PHP_METHOD(MFFI_Struct, byReference) */
+PHP_METHOD(MFFI_Struct, byReference)
 {
 	php_mffi_struct_definition *def;
 
@@ -149,7 +149,7 @@ PHP_METHOD(MFFI_Struct, define)
 const zend_function_entry mffi_struct_methods[] = {
 	PHP_ME(MFFI_Struct, define, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	PHP_ME(MFFI_Struct, pointer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	PHP_ME(MFFI_Struct, byRef, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	PHP_ME(MFFI_Struct, byReference, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	PHP_ME(MFFI_Struct, byValue, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	PHP_ME(MFFI_Struct, __construct, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
 	PHP_FE_END
@@ -198,11 +198,11 @@ static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *element
 	HashTable *element_hash = NULL;
 	zend_string *string_key = NULL;
 	zval *current_elem = NULL;
-	long i = 0;
+	long i = 0, php_type = 0;
 	size_t struct_size = 0;
 	zend_ulong num_key = -1;
 	ffi_type *type;
-	php_mffi_struct_definition *template;
+	php_mffi_struct_definition *template = NULL, *def = NULL;
 
 	element_hash = Z_ARRVAL_P(elements);
 	template = ecalloc(1, sizeof(php_mffi_struct_definition));
@@ -219,21 +219,44 @@ static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *element
 		}
 
 		/* TODO: Support user-defined structs */
-		if (Z_TYPE_P(current_elem) != IS_LONG /* && Z_TYPE_P(current_elem) != IS_STRING */) {
+		if (Z_TYPE_P(current_elem) != IS_LONG && Z_TYPE_P(current_elem) != IS_ARRAY && Z_TYPE_P(current_elem) != IS_STRING) {
 			zend_throw_exception_ex(mffi_ce_exception, 0, "Unsupported type for element %s", string_key->val);
-			return NULL;
+			goto cleanup;
 		}
 
-		type = php_mffi_get_type(Z_LVAL_P(current_elem));
+		switch(Z_TYPE_P(current_elem)) {
+			case IS_LONG:
 
-		if (!type) {
-			zend_throw_exception(mffi_ce_exception, "Unsupported type", 1);
-			return NULL;
+				type = php_mffi_get_type(Z_LVAL_P(current_elem));
+				if (!type) {
+					zend_throw_exception(mffi_ce_exception, "Unsupported type", 1);
+					goto cleanup;
+				}
+
+				php_type = Z_LVAL_P(current_elem);
+				break;
+
+			case IS_STRING:
+				def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(current_elem));
+
+				if (def == NULL) {
+					zend_throw_exception_ex(mffi_ce_exception, 0, "Struct definition %s not found", Z_STRVAL_P(current_elem));
+					goto cleanup;
+				}
+
+				php_type = FFI_TYPE_POINTER;
+				type = &ffi_type_pointer;
+				break;
+
+			case IS_ARRAY:
+				php_mffi_types_from_array(current_elem, string_key, &php_type, &type);
+
 		}
 
-		template->elements[i].index = i;
-		template->elements[i].php_type = Z_LVAL_P(current_elem);
+
+		template->elements[i].php_type = php_type;
 		template->elements[i].type = type;
+		template->elements[i].index = i;
 		template->elements[i].offset = struct_size;
 		struct_size += type->size;
 		template->element_types[i] = type;
@@ -248,6 +271,11 @@ static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *element
 	template->struct_size = struct_size;
 
 	return template;
+
+cleanup:
+	efree(template->element_types);
+	efree(template->elements);
+	efree(template);
 }
 /* }}} */
 

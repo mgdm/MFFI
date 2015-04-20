@@ -32,6 +32,6 @@ $tm->tm_zone = "BST";
 var_dump($tm);
 
 $lib = new MFFI\Library();
-$asctime = $lib->bind('asctime', [ TimeStruct::byValue() ], MFFI\Type::TYPE_STRING);
+$asctime = $lib->bind('asctime', [ TimeStruct::byReference() ], MFFI\Type::TYPE_STRING);
 var_dump($asctime($tm));
 
