@@ -103,6 +103,9 @@ typedef struct _php_mffi_struct_object {
 
 #define PHP_MFFI_TYPE_STRING 64
 
+#define PHP_MFFI_BY_REFERENCE 0
+#define PHP_MFFI_BY_VALUE 1
+
 #endif	/* PHP_mffi_H */
 
 /*

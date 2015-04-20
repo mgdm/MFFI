@@ -65,6 +65,57 @@ PHP_METHOD(MFFI_Struct, pointer)
 }
 /* }}} */
 
+/* {{{ PHP_METHOD(MFFI_Struct, byRef) */
+PHP_METHOD(MFFI_Struct, byRef)
+{
+	php_mffi_struct_definition *def;
+
+	PHP_MFFI_ERROR_HANDLING();
+	if (zend_parse_parameters_none() == FAILURE) {
+		PHP_MFFI_RESTORE_ERRORS();
+		return;
+	}
+	PHP_MFFI_RESTORE_ERRORS();
+
+	def = zend_hash_find_ptr(MFFI_G(struct_definitions), EX(called_scope)->name);
+	if (def == NULL) {
+		zval tmp;
+		object_init_ex(&tmp, EX(called_scope));
+		php_mffi_struct_get_definition(Z_OBJ(tmp));
+		zval_ptr_dtor(&tmp);
+	}
+
+	array_init(return_value);
+	add_next_index_string(return_value, EX(called_scope)->name->val);
+	add_next_index_long(return_value, PHP_MFFI_BY_REFERENCE);
+}
+/* }}} */
+
+/* {{{ PHP_METHOD(MFFI_Struct, byValue) */
+PHP_METHOD(MFFI_Struct, byValue)
+{
+	php_mffi_struct_definition *def;
+
+	PHP_MFFI_ERROR_HANDLING();
+	if (zend_parse_parameters_none() == FAILURE) {
+		PHP_MFFI_RESTORE_ERRORS();
+		return;
+	}
+	PHP_MFFI_RESTORE_ERRORS();
+
+	def = zend_hash_find_ptr(MFFI_G(struct_definitions), EX(called_scope)->name);
+	if (def == NULL) {
+		zval tmp;
+		object_init_ex(&tmp, EX(called_scope));
+		php_mffi_struct_get_definition(Z_OBJ(tmp));
+		zval_ptr_dtor(&tmp);
+	}
+
+	array_init(return_value);
+	add_next_index_string(return_value, EX(called_scope)->name->val);
+	add_next_index_long(return_value, PHP_MFFI_BY_VALUE);
+}
+/* }}} */
 
 /* {{{ PHP_METHOD(MFFI_Struct, define) */
 PHP_METHOD(MFFI_Struct, define)
@@ -96,9 +147,11 @@ PHP_METHOD(MFFI_Struct, define)
 
 /* {{{ */
 const zend_function_entry mffi_struct_methods[] = {
-	PHP_ME(MFFI_Struct, define, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-	PHP_ME(MFFI_Struct, pointer, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-	PHP_ME(MFFI_Struct, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(MFFI_Struct, define, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	PHP_ME(MFFI_Struct, pointer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	PHP_ME(MFFI_Struct, byRef, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	PHP_ME(MFFI_Struct, byValue, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	PHP_ME(MFFI_Struct, __construct, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
 	PHP_FE_END
 };
 /* }}} */
@@ -165,7 +218,8 @@ static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *element
 			return NULL;
 		}
 
-		if (Z_TYPE_P(current_elem) != IS_LONG && Z_TYPE_P(current_elem) != IS_STRING) {
+		/* TODO: Support user-defined structs */
+		if (Z_TYPE_P(current_elem) != IS_LONG /* && Z_TYPE_P(current_elem) != IS_STRING */) {
 			zend_throw_exception_ex(mffi_ce_exception, 0, "Unsupported type for element %s", string_key->val);
 			return NULL;
 		}
