@@ -276,6 +276,8 @@ cleanup:
 	efree(template->element_types);
 	efree(template->elements);
 	efree(template);
+
+	return NULL;
 }
 /* }}} */
 
