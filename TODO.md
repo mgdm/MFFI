@@ -13,3 +13,4 @@
 - [ ] Calling functions that return a pointer to an opaque struct
 - [ ] Calling functions accepting pointers to opaque structs
 - [ ] Calling functions with variadic arguments (probably tricky)
+- [ ] Use libffi closures to allow function callbacks back into PHP
