@@ -55,7 +55,7 @@ PHP_METHOD(MFFI_Library, bind)
 {
 	zend_string *func_name = NULL;
 	zval *args = NULL, *current_arg = NULL, *return_type = NULL;
-	HashTable *args_hash = NULL, *ht = NULL;
+	HashTable *args_hash = NULL;
 	php_mffi_library_object *intern = NULL;
 	php_mffi_function_object *function = NULL;
 	php_mffi_struct_definition *def = NULL;
