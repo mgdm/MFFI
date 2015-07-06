@@ -95,6 +95,7 @@ PHP_METHOD(MFFI_Library, bind)
 	function->ffi_arg_types = ecalloc(function->arg_count + 1, sizeof(ffi_type *));
 	function->php_arg_types = ecalloc(function->arg_count, sizeof(long));
 
+	int result;
 	ZEND_HASH_FOREACH_VAL(args_hash, current_arg) {
 		switch (Z_TYPE_P(current_arg)) {
 
@@ -104,14 +105,19 @@ PHP_METHOD(MFFI_Library, bind)
 				break;
 
 			case IS_ARRAY:
-				php_mffi_types_from_array(current_arg, func_name, &function->php_arg_types[i], &function->ffi_arg_types[i]);
+				result = php_mffi_types_from_array(current_arg, &function->php_arg_types[i], &function->ffi_arg_types[i]);
+
+				if (!result) {
+					zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid definition for %s", func_name->val);
+				}
+
 				break;
 
 			case IS_STRING:
 				def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(current_arg));
 
 				if (def == NULL) {
-					zend_throw_exception_ex(mffi_ce_exception, 0, "Struct definition for %s not found", Z_STRVAL_P(current_arg));
+					zend_throw_exception_ex(mffi_ce_exception, 0, "Struct definition for %s not found", func_name->val);
 					goto cleanup;
 				}
 
@@ -135,6 +141,8 @@ PHP_METHOD(MFFI_Library, bind)
 		function->return_type = &ffi_type_void;
 		function->php_return_type = FFI_TYPE_VOID;
 	} else {
+		int result;
+
 		switch (Z_TYPE_P(return_type)) {
 			case IS_NULL:
 				function->return_type = &ffi_type_void;
@@ -156,6 +164,16 @@ PHP_METHOD(MFFI_Library, bind)
 
 				function->return_type = &ffi_type_pointer;
 				function->php_return_type = FFI_TYPE_POINTER;
+				break;
+
+			case IS_ARRAY:
+				result = php_mffi_types_from_array(return_type, &function->php_return_type, &function->return_type);
+
+				if (!result) {
+					zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid definition for return type");
+					goto cleanup;
+				}
+
 				break;
 		}
 	}

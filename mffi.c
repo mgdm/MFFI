@@ -197,36 +197,32 @@ void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
 	zval_dtor(&tmp);
 }
 
-void php_mffi_types_from_array(zval *arg, zend_string *arg_name, long *php_type, ffi_type **type) {
+zend_bool php_mffi_types_from_array(zval *arg, long *php_type, ffi_type **type) {
 
 	php_mffi_struct_definition *def;
 	zval *tmp;
 	HashTable *ht = Z_ARRVAL_P(arg);
 
 	if (zend_hash_num_elements(ht) != 2) {
-		zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid argument definition for %s", arg_name->val);
-		return;
+		return 0;
 	}
 
 	tmp = zend_hash_index_find(ht, 0);
 
 	if (Z_TYPE_P(tmp) != IS_STRING) {
-		zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid argument definition for %s", arg_name->val);
-		return;
+		return 0;
 	}
 
 	def = zend_hash_find_ptr(MFFI_G(struct_definitions), Z_STR_P(tmp));
 
 	if (def == NULL) {
-		zend_throw_exception_ex(mffi_ce_exception, 0, "Struct definition for %s not found", Z_STRVAL_P(tmp));
-		return;
+		return 0;
 	}
 
 	tmp = zend_hash_index_find(ht, 1);
 
 	if (Z_TYPE_P(tmp) != IS_LONG) {
-		zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid argument definition for %s", arg_name->val);
-		return;
+		return 0;
 	}
 
 	if (Z_LVAL_P(tmp) == PHP_MFFI_BY_VALUE) {
@@ -236,6 +232,8 @@ void php_mffi_types_from_array(zval *arg, zend_string *arg_name, long *php_type,
 		*type = &ffi_type_pointer;
 		*php_type = FFI_TYPE_POINTER;
 	}
+
+	return 1;
 }
 
 /* {{{ PHP_MINIT_FUNCTION */
@@ -273,7 +271,6 @@ PHP_MINIT_FUNCTION(mffi)
 	PHP_MINIT(mffi_library)(INIT_FUNC_ARGS_PASSTHRU);
 	PHP_MINIT(mffi_function)(INIT_FUNC_ARGS_PASSTHRU);
 	PHP_MINIT(mffi_struct)(INIT_FUNC_ARGS_PASSTHRU);
-	PHP_MINIT(mffi_union)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 }

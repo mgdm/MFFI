@@ -107,7 +107,7 @@ PHP_METHOD(MFFI_Struct, byValue)
 	if (def == NULL) {
 		zval tmp;
 		object_init_ex(&tmp, EX(called_scope));
-		php_mffi_struct_get_definition(Z_OBJ(tmp));
+		def = php_mffi_struct_get_definition(Z_OBJ(tmp));
 		zval_ptr_dtor(&tmp);
 	}
 
@@ -138,6 +138,7 @@ PHP_METHOD(MFFI_Struct, define)
 	}
 
 	template = php_mffi_make_struct_definition(elements);
+
 	zend_hash_add_ptr(MFFI_G(struct_definitions), class_name, template);
 
 	INIT_CLASS_ENTRY_EX(new_class, class_name->val, class_name->len, NULL);
@@ -187,6 +188,11 @@ static php_mffi_struct_definition *php_mffi_struct_get_definition(zend_object *o
 	}
 
 	template = php_mffi_make_struct_definition(&elements);
+
+	if (EG(exception)) {
+		return NULL;
+	}
+
 	zend_hash_add_ptr(MFFI_G(struct_definitions), obj->ce->name, template);
 	zval_ptr_dtor(&elements);
 
@@ -198,7 +204,7 @@ static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *element
 	HashTable *element_hash = NULL;
 	zend_string *string_key = NULL;
 	zval *current_elem = NULL;
-	long i = 0, php_type = 0;
+	long i = 0, php_type = 0, result = 0;
 	size_t struct_size = 0;
 	zend_ulong num_key = -1;
 	ffi_type *type;
@@ -215,7 +221,7 @@ static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *element
 	ZEND_HASH_FOREACH_KEY_VAL(element_hash, num_key, string_key, current_elem) {
 		if (string_key == NULL) {
 			zend_throw_exception(mffi_ce_exception, "Structure elements need names", 1);
-			return NULL;
+			goto cleanup;
 		}
 
 		/* TODO: Support user-defined structs */
@@ -249,8 +255,14 @@ static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *element
 				break;
 
 			case IS_ARRAY:
-				php_mffi_types_from_array(current_elem, string_key, &php_type, &type);
+				result = php_mffi_types_from_array(current_elem, &php_type, &type);
 
+				if (!result) {
+					zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid argument definition for %s", string_key->val);
+					goto cleanup;
+				}
+
+				break;
 		}
 
 
