@@ -30,6 +30,6 @@ var_dump($handle);
 --EXPECTF--
 object(MFFI\Library)#%d (0) {
 }
-Caught exception: Could not open library
+Caught exception: Could not open library Nonsense
 object(MFFI\Library)#%d (0) {
 }
