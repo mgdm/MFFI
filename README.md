@@ -13,7 +13,7 @@ var_dump($sqrt(9)); // -> float(3.0)
 
 ## Installing MFFI on OS X
 
-```
+```bash
 $ brew install libffi
 $ git clone https://github.com/mgdm/MFFI
 $ cd MFFI
@@ -30,7 +30,7 @@ Installing shared extensions: /usr/local/Cellar/php70/7.0.5/lib/php/extensions/n
 
 Find your loaded `php.ini` file using `php --info | grep php.ini` and add the following two lines to this file:
 
-```
+```bash
 # The path copied from above
 extension_dir=/usr/local/Cellar/php70/7.0.5/lib/php/extensions/no-debug-non-zts-20151012/
 extension=mffi.so
@@ -38,7 +38,7 @@ extension=mffi.so
 
 A successful installation can be verified by running:
 
-```
+```bash
 php --info | grep "mffi => enabled"
 ```
 
