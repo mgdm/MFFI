@@ -109,6 +109,7 @@ PHP_METHOD(MFFI_Library, bind)
 
 				if (!result) {
 					zend_throw_exception_ex(mffi_ce_exception, 0, "Invalid definition for %s", func_name->val);
+					goto cleanup;
 				}
 
 				break;

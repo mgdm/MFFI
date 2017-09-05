@@ -17,6 +17,12 @@ static zend_object_handlers mffi_struct_object_handlers;
 static php_mffi_struct_definition *php_mffi_struct_get_definition(zend_object *obj);
 static php_mffi_struct_definition *php_mffi_make_struct_definition(zval *elements);
 
+#if PHP_VERSION_ID >= 70100
+#define GET_CALLED_SCOPE() zend_get_called_scope(EG(current_execute_data))
+#else
+#define GET_CALLED_SCOPE() EX(called_scope)
+#endif
+
 /* {{{ PHP_METHOD(MFFI_Struct, __construct */
 PHP_METHOD(MFFI_Struct, __construct)
 {
@@ -54,7 +60,7 @@ PHP_METHOD(MFFI_Struct, pointer)
 	}
 	PHP_MFFI_RESTORE_ERRORS();
 
-	object_init_ex(return_value, EX(called_scope));
+	object_init_ex(return_value, GET_CALLED_SCOPE());
 	intern = php_mffi_struct_fetch_object(Z_OBJ_P(return_value));
 
 	if (intern->template == NULL) {
@@ -77,16 +83,16 @@ PHP_METHOD(MFFI_Struct, byReference)
 	}
 	PHP_MFFI_RESTORE_ERRORS();
 
-	def = zend_hash_find_ptr(MFFI_G(struct_definitions), EX(called_scope)->name);
+	def = zend_hash_find_ptr(MFFI_G(struct_definitions), GET_CALLED_SCOPE()->name);
 	if (def == NULL) {
 		zval tmp;
-		object_init_ex(&tmp, EX(called_scope));
+		object_init_ex(&tmp, GET_CALLED_SCOPE());
 		php_mffi_struct_get_definition(Z_OBJ(tmp));
 		zval_ptr_dtor(&tmp);
 	}
 
 	array_init(return_value);
-	add_next_index_string(return_value, EX(called_scope)->name->val);
+	add_next_index_string(return_value, GET_CALLED_SCOPE()->name->val);
 	add_next_index_long(return_value, PHP_MFFI_BY_REFERENCE);
 }
 /* }}} */
@@ -103,16 +109,16 @@ PHP_METHOD(MFFI_Struct, byValue)
 	}
 	PHP_MFFI_RESTORE_ERRORS();
 
-	def = zend_hash_find_ptr(MFFI_G(struct_definitions), EX(called_scope)->name);
+	def = zend_hash_find_ptr(MFFI_G(struct_definitions), GET_CALLED_SCOPE()->name);
 	if (def == NULL) {
 		zval tmp;
-		object_init_ex(&tmp, EX(called_scope));
+		object_init_ex(&tmp, GET_CALLED_SCOPE());
 		def = php_mffi_struct_get_definition(Z_OBJ(tmp));
 		zval_ptr_dtor(&tmp);
 	}
 
 	array_init(return_value);
-	add_next_index_string(return_value, EX(called_scope)->name->val);
+	add_next_index_string(return_value, GET_CALLED_SCOPE()->name->val);
 	add_next_index_long(return_value, PHP_MFFI_BY_VALUE);
 }
 /* }}} */
@@ -166,8 +172,10 @@ static php_mffi_struct_definition *php_mffi_struct_get_definition(zend_object *o
 
 	fci.size = sizeof(fci);
 	ZVAL_STRINGL(&fci.function_name, "definition", sizeof("definition") - 1);
+#if PHP_VERSION_ID < 70100
 	fci.function_table = &obj->ce->function_table;
 	fci.symbol_table = NULL;
+#endif
 	fci.object = obj;
 	fci.retval = &elements;
 	fci.param_count = 0;

@@ -71,6 +71,8 @@ typedef struct _php_mffi_function_object {
 	ffi_type **ffi_arg_types;
 	long *php_arg_types;
 	long arg_count;
+	char *lib_name;
+	char *function_name;
 	ffi_cif cif;
 
 	zend_object std;

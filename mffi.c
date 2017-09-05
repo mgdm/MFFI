@@ -17,6 +17,7 @@ zend_class_entry *mffi_ce_type;
 
 ZEND_DECLARE_MODULE_GLOBALS(mffi)
 
+/* {{{ */
 ffi_type *php_mffi_get_type(long type) {
 	switch(type) {
 		case FFI_TYPE_VOID:
@@ -71,7 +72,9 @@ ffi_type *php_mffi_get_type(long type) {
 			return NULL;
 	}
 }
+/* }}} */
 
+/* {{{ */
 void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long type) {
 	switch (type) {
 		case FFI_TYPE_INT:
@@ -123,7 +126,9 @@ void php_mffi_set_return_value(zval *return_value, php_mffi_value *result, long 
 			break;
 	}
 }
+/* }}} */
 
+/* {{{ */
 void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
 	zval tmp = *arg;
 	zval_copy_ctor(&tmp);
@@ -196,7 +201,9 @@ void php_mffi_set_argument(zval *arg, php_mffi_value *dest, long type) {
 
 	zval_dtor(&tmp);
 }
+/* }}} */
 
+/* {{{ */
 zend_bool php_mffi_types_from_array(zval *arg, long *php_type, ffi_type **type) {
 
 	php_mffi_struct_definition *def;
@@ -235,6 +242,7 @@ zend_bool php_mffi_types_from_array(zval *arg, long *php_type, ffi_type **type) 
 
 	return 1;
 }
+/* }}} */
 
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(mffi)
